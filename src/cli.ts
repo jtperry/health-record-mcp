@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { Database } from 'bun:sqlite';
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 import { spawn } from 'bun'; // Needed for running build
 
 // --- Imports for --create-db mode ---
@@ -18,7 +19,8 @@ import { Implementation } from "@modelcontextprotocol/sdk/types.js"; // Import c
 
 // Corrected local module imports (assuming cli.ts is in src/)
 import { ClientFullEHR } from '../clientTypes.js'; // Assumes clientTypes.ts is in project root
-import { sqliteToEhr, ehrToSqlite, ensureSchema } from './dbUtils.js'; // Assumes dbUtils.ts is in src/
+import { sqliteToEhr, ehrToSqlite, ensureSchema } from './dbUtils.js';
+import { ccdaToEhr } from './ccdaToEhr.js'; // Assumes dbUtils.ts is in src/
 import { AppConfig, loadConfig } from './config.ts'; // Import config loading and AppConfig type
 
 // --- Tool Schemas & Logic (Imported) ---
@@ -276,10 +278,15 @@ async function backfillSource(
 
     const db = new Database(dbPath);
     try {
+        // ensureSchema manages its own transactions (the primary-key migration cannot
+        // run inside one), so it goes before the update transaction opens.
+        ensureSchema(db);
         db.exec('BEGIN TRANSACTION;');
-        ensureSchema(db); // The column may not exist yet on an older file.
-        const resources = db.prepare('UPDATE fhir_resources SET source = ? WHERE source IS NULL').run(options.source).changes;
-        const attachments = db.prepare('UPDATE fhir_attachments SET source = ? WHERE source IS NULL').run(options.source).changes;
+        // Rows predating the source column read as NULL; rows created by the keyed
+        // schema default to the empty string. Both mean "unlabelled".
+        const unlabelled = `WHERE source IS NULL OR source = ''`;
+        const resources = db.prepare(`UPDATE fhir_resources SET source = ? ${unlabelled}`).run(options.source).changes;
+        const attachments = db.prepare(`UPDATE fhir_attachments SET source = ? ${unlabelled}`).run(options.source).changes;
         db.exec('COMMIT;');
         console.error(`[CLI] Backfilled source="${options.source}" onto ${resources} resource(s) and ${attachments} attachment(s).`);
     } catch (error: any) {
@@ -332,6 +339,76 @@ async function importJsonToDb(jsonPath: string, dbPath: string, source: string |
     }
 }
 
+// --- Function for --import-ccda mode ---
+// Reads a C-CDA clinical document (bare .xml, or a .zip as exported by patient
+// portals) and persists it through the same ehrToSqlite path the FHIR importers use.
+async function importCcdaToDb(inputPath: string, dbPath: string, source: string): Promise<void> {
+    console.error(`[CLI] Reading C-CDA from: ${inputPath}`);
+
+    let xmlPath = inputPath;
+    let pdfPath: string | null = null;
+    let tempDir: string | null = null;
+
+    if (inputPath.toLowerCase().endsWith('.zip')) {
+        // These archives carry absolute paths ("/Document_XML/..."), so extract with
+        // -j to flatten them: never trust archive-supplied paths (zip-slip).
+        tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ccda-'));
+        // stderr is inherited rather than piped: `Response` is shadowed by the express
+        // type import in this file, so letting unzip write straight through is simpler
+        // than capturing the stream.
+        const proc = spawn(['unzip', '-o', '-j', inputPath, '-d', tempDir], { stdio: ['ignore', 'ignore', 'inherit'] });
+        // unzip exits 1 for warnings, not errors -- and stripping the archive's absolute
+        // paths (which is exactly what we want -j to do) raises one. Only 2+ is a failure.
+        const exitCode = await proc.exited;
+        if (exitCode > 1) {
+            console.error(`[CLI] Error: failed to extract "${inputPath}" (unzip exit ${exitCode}).`);
+            process.exit(1);
+        }
+        const names = await fs.readdir(tempDir);
+        const xmls = names.filter(n => n.toLowerCase().endsWith('.xml'));
+        if (xmls.length !== 1) {
+            console.error(`[CLI] Error: expected exactly one .xml in the archive, found ${xmls.length}: ${xmls.join(', ')}`);
+            process.exit(1);
+        }
+        xmlPath = path.join(tempDir, xmls[0]);
+        const pdfs = names.filter(n => n.toLowerCase().endsWith('.pdf'));
+        if (pdfs.length === 1) pdfPath = path.join(tempDir, pdfs[0]);
+        console.error(`[CLI] Extracted ${xmls[0]}${pdfPath ? ` and ${pdfs[0]}` : ''}`);
+    }
+
+    try {
+        const documentBytes = await fs.readFile(xmlPath);
+        const pdfBytes = pdfPath ? await fs.readFile(pdfPath) : undefined;
+
+        const parsed = ccdaToEhr(documentBytes.toString('utf-8'), {
+            documentBytes,
+            pdfBytes,
+            pdfName: pdfPath ? path.basename(pdfPath) : undefined,
+        });
+
+        console.error('[CLI] Section mapping:');
+        for (const sec of parsed.sectionSummary) {
+            if (!sec.entries) continue;
+            const flag = sec.mapped === 0 ? '  (UNMAPPED - retained in source XML only)' : '';
+            console.error(`[CLI]   ${sec.title.padEnd(28)} entries=${String(sec.entries).padStart(3)}  resources=${sec.mapped}${flag}`);
+        }
+
+        const total = Object.values(parsed.fhir).reduce((n, a) => n + a.length, 0);
+        console.error(`[CLI] Parsed ${total} resources across ${Object.keys(parsed.fhir).length} types, ${parsed.attachments.length} attachments.`);
+
+        const db = new Database(dbPath);
+        try {
+            console.error('[CLI] Populating database...');
+            await ehrToSqlite({ fhir: parsed.fhir, attachments: parsed.attachments }, db, source, 'ccda');
+            console.error(`[CLI] Successfully saved C-CDA data to ${dbPath}`);
+        } finally {
+            try { db.close(); } catch (e) { console.error('[CLI] Error closing DB:', e); }
+        }
+    } finally {
+        if (tempDir) await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
+}
+
 // --- Main CLI Function ---
 async function main() {
     const program = new Command();
@@ -350,12 +427,35 @@ async function main() {
         // Add new mutually exclusive flags for handling existing DB in --create-db mode
         .option('--force-overwrite', 'If --db exists in --create-db mode, delete it before creating a new one.')
         .option('--force-concat', 'If --db exists in --create-db mode, add new data to the existing file.')
+        .option('--import-ccda <path>', 'Import a C-CDA clinical document (.xml, or .zip as exported by a patient portal) into the --db path. Requires --source.')
         .option('--source <name>', 'Label the ingested records with the health system they came from (e.g. "MultiCare"). Stored in the "source" column of both tables.')
         .option('--backfill-source', 'Before ingesting, stamp every record that currently has no source with the --source value. Use once on a database built before the source column existed.')
         .parse(process.argv);
 
     const options = program.opts();
     const dbPath = path.resolve(options.db);
+
+    if (options.importCcda) {
+        // --- Import C-CDA Mode ---
+        console.error('[CLI] Running in --import-ccda mode.');
+
+        if (options.createDb || options.importJson) {
+            console.error('[CLI] Error: --import-ccda cannot be combined with --create-db or --import-json.');
+            process.exit(1);
+        }
+        // Unlike a FHIR pull there is no endpoint to infer a provider name from, and an
+        // unlabelled row in a multi-source database is very hard to attribute later.
+        if (!options.source) {
+            console.error('[CLI] Error: --import-ccda requires --source <name> (e.g. --source "ZoomCare").');
+            process.exit(1);
+        }
+
+        const ccdaPath = path.resolve(options.importCcda);
+        await resolveExistingDb(dbPath, options);
+        await backfillSource(dbPath, options);
+        await importCcdaToDb(ccdaPath, dbPath, options.source);
+        process.exit(0);
+    }
 
     if (options.importJson) {
         // --- Import JSON Mode ---
