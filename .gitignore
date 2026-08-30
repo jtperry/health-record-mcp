@@ -8,3 +8,4 @@ node_modules
 # these rules are a safety net for anything accidentally written here.
 data/
 *.sqlite
+.DS_Store

@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "health-circlejtp",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-08-30",
+  "observability": { "enabled": true },
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    // The Worker runs first so it can add security headers and resolve the brand
+    // file out of R2 rather than from the deployed assets.
+    "run_worker_first": true
+  },
+
+  // The Epic brand directory lives in R2, not in the deploy, so the weekly refresh
+  // job can replace it without shipping a new Worker version. It is also far too
+  // large to be a static asset uncompressed (~47 MB against a 25 MiB limit).
+  "r2_buckets": [
+    { "binding": "BRANDS", "bucket_name": "health-circlejtp-brands" }
+  ],
+
+  "triggers": {
+    // Weekly refresh of the Epic brand directory. See docs/health.circlejtp.me-plan.md §5.
+    "crons": ["0 6 * * SUN"]
+  },
+
+  "routes": [
+    { "pattern": "health.circlejtp.me", "custom_domain": true }
+  ],
+
+  "vars": {
+    // Set once the Epic app registration is approved. While empty, the site
+    // renders honestly as "not yet available" rather than offering a connect
+    // button that cannot work.
+    "EPIC_CLIENT_ID": ""
+  }
+}
