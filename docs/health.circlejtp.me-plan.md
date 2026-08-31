@@ -498,6 +498,63 @@ the whole record to the user.
 **9. Is user data retained after a user deletes the app and closes their account?**
 > `No.`
 
+### Second questionnaire (first-person wording)
+
+Epic presents a second questionnaire covering similar ground in first person. Verbatim:
+
+**Which option best describes the company offering the app to users/patients?**
+> `An individual or independent developer.`
+
+**Do you have a business associate agreement with each covered entity your app will connect to?**
+> `No.`
+
+Correct and expected: under the HIPAA right of access, an app a patient directs their data to
+is not a business associate of the covered entity. The app acts for the patient, not for the
+health system, so a BAA is the wrong instrument.
+
+**How is this app funded? (Select all that apply.)**
+> `This app is produced by volunteers or is available in the open source community.` — this
+> option only.
+
+**Where can this app store user data? (Select all that apply.)**
+> `Locally on the user's device.` — this option only.
+
+**Other than the user, who has access to user data? (Select all that apply.)**
+> `No one; data never leaves the user's device.` — this option only.
+
+**For entities that can access user data, will the user specifically approve and be notified of
+each access...?**
+> `Users specifically approve each time their information is accessed or shared.`
+
+Every retrieval requires the user to initiate it and authorize through their health system's
+own consent screen; nothing happens in the background.
+
+**Do you allow users to obtain a record of the data that have been collected about them?**
+> `We allow users to obtain a complete record of the data that have been collected about them.`
+
+**Does this app allow users to delete the data that have been stored about them?**
+> `This app allows users to delete all of the data that we have stored about them.`
+
+**Do you retain user data after a user deletes the app and closes their account?**
+> `No.`
+
+**Other than providing direct service to the user, how do you use data about the user? (Select
+all that apply.)**
+> `We don't use data about users beyond providing direct services.` — this option only.
+
+**For how long does this app store user data?**
+> `This app stores user data for:` with the text
+> *"the browser session only; any downloaded copy remains on the user's device under the user's
+> sole control until they delete it"*
+
+This version of the question **does** offer `This app does not store user data.`, unlike the
+first questionnaire. Do not select it: "Where can this app store user data?" was answered
+*locally on the user's device*, and answering "does not store" here contradicts that. A
+reviewer comparing the two would see the inconsistency.
+
+**Does this app allow users to obtain a record of who has accessed data about them?**
+> `This app allows users to obtain a complete record of who has accessed data about them.`
+
 #### On questions 5 and 8
 
 Nothing is collected and nobody accesses anything, and neither question offers an "N/A".
