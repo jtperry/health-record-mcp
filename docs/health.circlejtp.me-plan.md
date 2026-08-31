@@ -599,9 +599,18 @@ Diagnosis by elimination, since the error text carries no detail:
 
 The bogus-client control is the informative one: Epic returns this page for a client it does
 not recognise, and our client is indistinguishable from one that does not exist. So the
-non-production client id is not yet active in the sandbox. Epic's documentation says app
-requests "typically appear within 5 minutes, but please allow an hour" after marking ready.
-Retry rather than change configuration — nothing in the request is wrong.
+non-production client id is not yet active in the sandbox.
+
+**Expect this to take far longer than Epic's own documentation implies.** The app-request
+guidance says requests "typically appear within 5 minutes, but please allow an hour"; reports
+from other developers put sandbox client synchronisation at **12 hours or more, sometimes a
+day or two**. Still failing at 12 minutes means nothing. Retry rather than change
+configuration — nothing in the request is wrong, and changing settings while waiting only
+makes it harder to tell what fixed it.
+
+There is no notification when it activates, and the error page is byte-identical throughout,
+so `scripts/check-epic-sandbox.sh` polls the authorize endpoint and exits 0 once Epic stops
+serving the error page.
 
 **Also observed:** SMART discovery returned `503 Service Unavailable` on the first attempt and
 succeeded on the next, with the endpoint returning 200 on five consecutive probes from outside
