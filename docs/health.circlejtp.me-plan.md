@@ -386,6 +386,39 @@ distribution, which is what makes an app unusable at a health system like Mayo.
 
 ---
 
+## 7.1 Registration outcome (2026-08-30)
+
+App **My Health Record Access** created. Client IDs issued (not secret — a public client's id
+ships in the browser bundle by design):
+
+| | |
+|---|---|
+| Production Client ID | `0eb38377-086f-4850-98b3-db0bac91e332` |
+| Non-Production Client ID | `8d804225-8ca7-430b-99f1-2b7762258e09` |
+
+**Marking the app ready for production is a one-way door.** Epic states the app cannot be
+edited afterwards, so use *Save & Ready for Sandbox* until everything is settled.
+
+Settings worth not changing without understanding why:
+
+- **FHIR ID Generation Scheme → Use Unconstrained FHIR IDs.** The alternative truncates ids
+  to 64 characters for USCDI resources. Real Epic ids already collected run past 90
+  characters, and `resource_id` is part of the database primary key, so truncation would
+  change identity and break idempotent re-import.
+- **SMART Scope Version → SMART v1.** Then the retriever must request `patient/*.read`.
+  The `patient/*.rs` string in the inherited configs is SMART **v2** syntax and will not work
+  against a v1 registration.
+- **Intended Purposes → Individuals' Access to their EHI**, Intended Users →
+  Individual/Caregiver. "Research" is about research *use* of data and does not apply here.
+
+Fields that did not persist through the first save, so re-check them: **Public Documentation
+URL** reverted to the `http://www.example.com` placeholder.
+
+Still outstanding on the form: Terms and Conditions URL (now `https://health.circlejtp.me/terms`),
+the Description field, the Data Use Questionnaire, and accepting the open.epic terms of use.
+
+---
+
 ## 8. Build order
 
 | # | Step | Status |

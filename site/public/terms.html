@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms and Conditions — Get a copy of your own medical record</title>
+<meta name="description" content="Terms and Conditions for the record retrieval tool at health.circlejtp.me.">
+<style>
+  :root {
+    --bg: #fbfaf8; --surface: #ffffff; --text: #1b1b1f; --muted: #5b5b66;
+    --line: #e3e1dd; --accent: #1c5d99; --accent-ink: #ffffff;
+    --warn-bg: #fff8f2; --warn-line: #c2410c; --warn-ink: #7c2d12;
+    --ok: #146c43;
+    --measure: 42rem;
+  }
+  :root:not([data-theme="light"]) { }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14141a; --surface: #1c1c24; --text: #eceaf0; --muted: #a2a0ad;
+      --line: #32323e; --accent: #7fb3e0; --accent-ink: #10131a;
+      --warn-bg: #2a1710; --warn-line: #f97316; --warn-ink: #fdba74;
+      --ok: #6ee7a8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14141a; --surface: #1c1c24; --text: #eceaf0; --muted: #a2a0ad;
+    --line: #32323e; --accent: #7fb3e0; --accent-ink: #10131a;
+    --warn-bg: #2a1710; --warn-line: #f97316; --warn-ink: #fdba74;
+    --ok: #6ee7a8;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 400 17px/1.65 ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+  main { max-width: var(--measure); margin: 0 auto; padding: 3rem 1.25rem 5rem; }
+  h1, h2, h3 { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.2; letter-spacing: -0.015em; }
+  h1 { font-size: clamp(2rem, 5vw, 2.75rem); margin: 0 0 1rem; }
+  h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+  h3 { font-size: 1.15rem; margin: 2rem 0 .5rem; }
+  p { margin: 0 0 1.1rem; }
+  a { color: var(--accent); }
+  ul { padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  .lede { font-size: 1.15rem; color: var(--muted); }
+  .rule { border: 0; border-top: 1px solid var(--line); margin: 3rem 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em;
+         background: color-mix(in srgb, var(--text) 8%, transparent); padding: .1em .35em; border-radius: 4px; }
+
+  /* --- The warning: visually dominant, never collapsed --- */
+  .warning {
+    background: var(--warn-bg); border: 2px solid var(--warn-line);
+    border-radius: 10px; padding: 1.75rem 1.5rem; margin: 2.5rem 0;
+  }
+  .warning h2 { margin-top: 0; color: var(--warn-ink); font-size: 1.6rem; }
+  .warning h3 { color: var(--warn-ink); font-size: 1.2rem; }
+  .warning strong { color: var(--warn-ink); }
+  .warning .headline { font-size: 1.2rem; font-weight: 600; }
+  blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 3px solid var(--warn-line);
+               color: var(--muted); font-style: italic; }
+
+  .consent {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1.5rem; margin: 2rem 0;
+  }
+  .consent label { display: flex; gap: .75rem; align-items: flex-start; cursor: pointer;
+                   font-family: ui-sans-serif, system-ui, sans-serif; font-size: .97rem; }
+  .consent input { margin-top: .3rem; width: 1.15rem; height: 1.15rem; flex: none; }
+  button {
+    margin-top: 1.25rem; width: 100%; padding: .85rem 1rem; font: 600 1.05rem/1 ui-sans-serif, system-ui, sans-serif;
+    color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 8px; cursor: pointer;
+  }
+  button[disabled] { opacity: .45; cursor: not-allowed; }
+  .pending { margin-top: 1rem; padding: .85rem 1rem; border: 1px dashed var(--line);
+             border-radius: 8px; color: var(--muted); font-family: ui-sans-serif, system-ui, sans-serif;
+             font-size: .92rem; }
+  .refs { font-size: .93rem; }
+  .refs td { padding: .35rem .75rem .35rem 0; vertical-align: top; border-bottom: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; }
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: .9rem; }
+  .disclaimer { font-size: .93rem; color: var(--muted); }
+</style></head>
+<body>
+<main>
+
+  <p><a href="/">&larr; Back to the main page</a></p>
+
+  <h1>Terms and Conditions</h1>
+  <p class="lede">
+    Please read these terms before authorizing access to your health information.
+  </p>
+  <p><strong>Last updated:</strong> 30 August 2026</p>
+
+  <h2>1. What this tool is</h2>
+  <p>
+    This tool helps you obtain a copy of your own medical record from your health system and
+    save it to your own device. It is operated by <strong>JT Perry</strong>
+    (<a href="mailto:jt.perry@gmail.com">jt.perry@gmail.com</a>) as an independent individual.
+  </p>
+  <p>
+    It is not affiliated with, endorsed by, or sponsored by Epic Systems Corporation,
+    athenahealth, or any health system. References to those organizations are descriptive only.
+  </p>
+
+  <h2>2. How your data flows</h2>
+  <p>
+    This is a browser-only application. When you connect:
+  </p>
+  <ul>
+    <li>You authenticate <strong>directly with your health system</strong>, on their own site.
+      Your username and password are never seen by this site.</li>
+    <li>Your browser exchanges the authorization code and requests your record
+      <strong>directly from your health system's servers</strong>.</li>
+    <li>Your record is assembled in your browser and written to your device.</li>
+  </ul>
+  <p>
+    <strong>Your health information is never transmitted to, received by, or stored on any
+    server operated by us.</strong> This is a property of how the software is built, not merely
+    a policy commitment. It also means we cannot retrieve, correct, or delete your record — we
+    never hold a copy.
+  </p>
+
+  <h2>3. The copy you create is your responsibility</h2>
+  <div class="warning">
+    <p class="headline">
+      Once your record is downloaded, HIPAA no longer protects it.
+    </p>
+    <p>
+      HIPAA governs your health system, not you and not this tool. The U.S. Department of
+      Health and Human Services has stated that the HIPAA Rules
+    </p>
+    <blockquote>
+      &ldquo;do not impose any restrictions on how an individual or the individual&rsquo;s
+      designee, such as an app, may use the health information that has been disclosed
+      pursuant to the individual&rsquo;s right of access.&rdquo;
+    </blockquote>
+    <p>
+      <strong>You accept sole and complete responsibility</strong> for the confidentiality,
+      integrity, security, storage, use, and disclosure of the copy you create, and for any
+      consequence of it being exposed — including through a lost or unencrypted device, a
+      cloud-sync folder, malware, another person with access to your computer, or your own
+      sharing of the file with any person or service.
+    </p>
+    <p>
+      Health information cannot be un-disclosed. If you are not prepared to secure this file
+      yourself, do not use this tool.
+    </p>
+  </div>
+
+  <h2>4. Acceptable use</h2>
+  <p>You agree that you will:</p>
+  <ul>
+    <li>Use this tool only to access records you are legally entitled to access — your own, or
+      those of someone for whom you hold lawful authority such as a parent or legal proxy;</li>
+    <li>Not use it to access another person's record without that authority;</li>
+    <li>Not attempt to disrupt, overload, or circumvent the security of this site or of any
+      health system it connects to.</li>
+  </ul>
+
+  <h2>5. No warranty</h2>
+  <p>
+    This tool is provided <strong>&ldquo;as is&rdquo; and &ldquo;as available&rdquo;, without
+    warranty of any kind</strong>, express or implied, including but not limited to warranties
+    of merchantability, fitness for a particular purpose, accuracy, completeness, title, and
+    non-infringement.
+  </p>
+  <p>
+    <strong>No guarantee of completeness or accuracy.</strong> The data comes from your health
+    system. It may be incomplete, out of date, or incorrect. What is retrieved is not a
+    certified copy of your legal medical record, and records held by providers you do not
+    connect to will not appear. For an official copy, contact your health system's medical
+    records department.
+  </p>
+  <p>
+    <strong>Not medical advice.</strong> This tool retrieves and displays records; it does not
+    interpret them. Nothing here is medical advice. Do not make health decisions based on this
+    data without consulting a qualified clinician.
+  </p>
+  <p>
+    <strong>No guarantee of availability.</strong> This is a personal, non-commercial project.
+    It may change, break, or be discontinued at any time and without notice.
+  </p>
+
+  <h2>6. Limitation of liability</h2>
+  <p>
+    To the maximum extent permitted by applicable law, the operator shall not be liable for any
+    direct, indirect, incidental, special, consequential, exemplary, or punitive damages, or
+    for any loss of data, privacy, profits, or goodwill, arising out of or relating to your use
+    of this tool or to the creation, storage, use, disclosure, or loss of any copy of health
+    information created through it — whether based in contract, tort, negligence, strict
+    liability, or otherwise, and whether or not the operator has been advised of the
+    possibility of such damages.
+  </p>
+  <p>
+    Some jurisdictions do not allow the exclusion of certain warranties or the limitation of
+    certain liabilities. Where such a limitation is not permitted, the exclusions above apply
+    to the fullest extent permitted by law, and nothing in these terms limits liability that
+    cannot lawfully be limited.
+  </p>
+
+  <h2>7. Your rights, and what they are not</h2>
+  <p>
+    Your right to obtain this data comes from federal law — the 21st Century Cures Act
+    (Pub. L. No. 114-255), the HIPAA right of access at 45 CFR &sect; 164.524, and the
+    information-blocking rules at 45 CFR Part 171. This tool merely helps you exercise it.
+  </p>
+  <p>
+    Because no health information is held here, there is nothing for you to request, correct,
+    or delete from us. Requests to access, amend, or restrict your medical record must be made
+    to your health system, which remains the custodian of that record.
+  </p>
+
+  <h2>8. Changes to these terms</h2>
+  <p>
+    These terms may be updated. The date at the top reflects the most recent revision.
+    Continued use after a change constitutes acceptance of the revised terms.
+  </p>
+
+  <h2>9. Contact</h2>
+  <p>
+    JT Perry &mdash; <a href="mailto:jt.perry@gmail.com">jt.perry@gmail.com</a>
+  </p>
+
+  <hr class="rule">
+  <p><a href="/">&larr; Back to the main page</a></p>
+
+  <footer>
+    <p>An independent tool for exercising your right of access under the 21st Century Cures Act.</p>
+    <p>Operated by JT Perry &middot;
+       <a href="mailto:jt.perry@gmail.com">jt.perry@gmail.com</a></p>
+  </footer>
+
+</main>
+</body>
+</html>
