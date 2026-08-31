@@ -434,7 +434,26 @@ What does *not* change: we still never receive the data. The architecture in §2
 offering this publicly defensible at all — there is no central store to breach, and no
 population of records to lose.
 
-### 9.2 `epic.json` is never committed to git
+### 9.2 The named operator is JT Perry
+
+The site is operated by **JT Perry** (`jt.perry@gmail.com`) as an independent individual, and
+says so in the disclaimer and the footer.
+
+This was chosen with the trade-off understood: an individual's own name carries personal
+liability in a way an entity does not, and the exposure grows because the tool is offered
+publicly (§9.1). It remains on the list for counsel (§11) — forming an entity later is
+possible, but the name is already published from this point.
+
+Two practical consequences:
+
+- A personal address on a public page will be harvested. If the volume becomes a problem, a
+  Cloudflare Email Routing alias on `circlejtp.me` forwards to the same inbox and can be
+  rotated without editing the site.
+- The contact copy says plainly that there is nothing to request, correct, or delete, because
+  no health information is held here. Without that, a contact address on a page about medical
+  records invites requests that cannot be fulfilled.
+
+### 9.3 `epic.json` is never committed to git
 
 Confirmed. The processed brand file is published to R2 by the weekly job (§5.4); only the
 pipeline code is versioned. Weekly commits of a 49 MB artifact would add roughly 2.5 GB of
@@ -444,8 +463,6 @@ unprunable history per year.
 
 ## 10. Open questions
 
-- **Who is "we"?** The disclaimer needs a named operator. An individual's personal name
-  carries personal liability in a way an entity does not. Worth a conversation with counsel.
 - **Does the FTC Health Breach Notification Rule (16 CFR Part 318) apply?** It covers vendors
   of personal health records *not* covered by HIPAA. A static site that never receives or
   holds health data is arguably outside it — but "arguably" is doing work in that sentence.
@@ -462,7 +479,8 @@ Bring to counsel:
 - [ ] Warning language — is it sufficient to establish informed consent?
 - [ ] Liability disclaimer — enforceability in the operating jurisdiction
 - [ ] Whether the consent checkbox creates an enforceable agreement
-- [ ] Named operator and entity structure (§10)
+- [ ] Entity structure — the named operator is decided (§9.2), but whether it should
+      remain an individual rather than an entity is still a question for counsel
 - [ ] FTC Health Breach Notification Rule applicability (§10)
 - [ ] Duty of care arising from offering this publicly (§9.1)
 - [ ] Accuracy of every statutory citation in §4.2 and §4.8
