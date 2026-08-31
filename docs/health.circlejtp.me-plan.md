@@ -449,33 +449,67 @@ matches what a patient actually encounters.
 ### Data Use Questionnaire answers
 
 Health systems rely on these when deciding whether to trust the app, so each is derived from
-what the code does rather than from what reads best.
+what the code does rather than from what reads best. Recorded verbatim because the app becomes
+uneditable once marked ready for production.
 
-| Question | Answer |
-|---|---|
-| Where does this app store user data? | This app can store user data locally on the user's device |
-| Other than the user, who has access to user data? | No one; data never leaves the user's device |
-| Does the developer use data beyond providing direct services? | No |
-| What other individuals from the record does the app use data about? | No one |
-| Does the app allow users to obtain a complete record of data collected about them? | Yes, complete |
-| Does the app allow users to obtain a complete record of who accessed data about them? | Yes, complete |
-| Is user data retained after the user deletes the app / closes their account? | No |
+**1. Where does this app store user data? (Select all that apply.)**
+> `This app can store user data locally on the user's device.` — this option only.
 
-Notes on the two that required judgement. Nothing is collected and nobody accesses anything,
-and neither question offers an "N/A". "Yes, complete" was chosen because the "No" options carry
-a false implication — *does not allow users to obtain a record of the data stored about them*
-reads as withholding data the developer holds, and there is none. The counter-argument is that
-"Yes" may imply a data-access-request feature that does not exist; the substance is that there
-is nothing to show because nothing exists, and "Yes" conveys that better than "No".
+`This app does not store user data.` is **not** selected: the download writes a file to the
+user's disk and sessionStorage briefly holds the token, both of which are storage on the device.
 
-"This app does not store user data" was **not** selected: the download writes a file to the
-user's disk and sessionStorage briefly holds the token, both of which are storage on the
-device. The "users authorize" access options were not selected either, since the app provides
-no sharing mechanism — a user forwarding the file themselves is not the app granting access.
+**2. For how long does this app store user data?**
+> `This app stores your data for:` with the text
+> *"the browser session only; any downloaded copy remains on the user's device under the user's
+> sole control until they delete it"*
 
-**These answers commit the project to the browser-only architecture.** Combined with Epic
-making the app uneditable once production-ready, introducing any server-side component that
-received record data would render them false with no way to correct them.
+`This app stores your data indefinitely.` is not selected — it reads as the developer retaining
+data, which never happens.
+
+**3. Does this app allow users to delete all of the data that have been stored about them?**
+> `Yes, this app allows users to delete all of the data that have been stored about them.`
+
+**4. Other than the user, who has access to user data? (Select all that apply.)**
+> `No one; data never leaves the user's device.` — this option only.
+
+The "users authorize" options are not selected: the app provides no sharing mechanism, and a
+user forwarding the file themselves is not the app granting access.
+
+**5. Does the app developer allow users to obtain a complete record of the data that have been
+collected about them?**
+> `Yes, the app developer allows users to obtain a complete record of the data that have been
+> stored about them.`
+
+**6. Does the app developer use data about a user for reasons other than providing direct
+services to the user?**
+> `No, the app developer doesn't use data about users beyond providing direct services.` — this
+> option only.
+
+**7. What other individuals from the user's health record does the app use data about beyond
+providing direct services? (Select all that apply)**
+> `No one.` — this option only.
+
+The record may contain RelatedPerson entries, but the app does not *use* that data; it hands
+the whole record to the user.
+
+**8. Does this app allow users to obtain a complete record of who has accessed data about them?**
+> `Yes, this app allows users to obtain a complete record of who has accessed data about them.`
+
+**9. Is user data retained after a user deletes the app and closes their account?**
+> `No.`
+
+#### On questions 5 and 8
+
+Nothing is collected and nobody accesses anything, and neither question offers an "N/A".
+"Yes, complete" was chosen because the "No" options carry a false implication — *does not allow
+users to obtain a record of the data stored about them* reads as withholding data the developer
+holds, and there is none. The counter-argument is that "Yes" may imply a data-access-request
+feature that does not exist; the substance is that there is nothing to show because nothing
+exists, and "Yes" conveys that better than "No". Revisit if counsel disagrees.
+
+**These answers commit the project to the browser-only architecture.** Combined with Epic making
+the app uneditable once production-ready, introducing any server-side component that received
+record data would render them false with no way to correct them.
 
 Still outstanding on the form: Terms and Conditions URL (now `https://health.circlejtp.me/terms`),
 the Description field, the Data Use Questionnaire, and accepting the open.epic terms of use.
