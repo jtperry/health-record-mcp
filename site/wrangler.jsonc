@@ -30,9 +30,14 @@
   ],
 
   "vars": {
-    // Set once the Epic app registration is approved. While empty, the site
-    // renders honestly as "not yet available" rather than offering a connect
-    // button that cannot work.
-    "EPIC_CLIENT_ID": ""
+    // Set once the Epic app registration is approved AND legal review is complete.
+    // While empty, the site renders honestly as "not yet available" rather than
+    // offering a connect button that cannot work.
+    "EPIC_CLIENT_ID": "",
+
+    // Lets us exercise the real flow against Epic's sandbox before the connect
+    // button is offered publicly: /ehr-connect?preview=<token> sets a short-lived
+    // cookie so the Epic redirect back to /ehr-callback is also allowed.
+    "PREVIEW_TOKEN": "819088d6b5ea71081599da21"
   }
 }

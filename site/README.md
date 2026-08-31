@@ -67,3 +67,32 @@ npx wrangler r2 object put health-circlejtp-brands/epic.json \
 
 `EPIC_CLIENT_ID` stays empty until the Epic app registration is approved. While empty the
 site says so plainly rather than offering a connect button that cannot work.
+
+## Preview gate
+
+The retriever bundle is deployed before the connect button is offered publicly, so the flow
+can be exercised against Epic's sandbox while legal review is outstanding. `/ehr-connect`,
+`/ehr-callback` and `/ehretriever.html` are therefore gated:
+
+- allowed outright once `EPIC_CLIENT_ID` is set;
+- otherwise allowed only with `?preview=<PREVIEW_TOKEN>`, which sets a one-hour cookie so
+  Epic's redirect back to `/ehr-callback` — which carries no query string of ours — is
+  also allowed.
+
+Without this the landing page would say the flow is unavailable while `/ehr-connect` quietly
+worked for anyone who guessed the URL. `/healthz` reports both `connectEnabled` and
+`retrieverDeployed` so the two can be told apart.
+
+Sandbox testing:
+
+```
+https://health.circlejtp.me/ehr-connect?preview=<token>&brandTags=epic^sandbox
+```
+
+Epic's test patient is `fhircamila` / `epicepic1`.
+
+## Scopes
+
+The app is registered as **SMART v1**, so the retriever requests `patient/*.read`.
+The `patient/*.rs` in other configs in this repository is SMART **v2** syntax and will not
+work against this registration.

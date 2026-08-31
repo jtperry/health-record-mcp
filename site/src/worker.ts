@@ -12,6 +12,30 @@ interface Env {
     BRANDS: R2Bucket;
     /** Epic app client id. Empty until app registration is approved. */
     EPIC_CLIENT_ID: string;
+    /** Lets the operator exercise the flow before it is offered publicly. */
+    PREVIEW_TOKEN: string;
+}
+
+const PREVIEW_COOKIE = 'hcj_preview';
+
+/**
+ * Whether the retrieval flow may be served.
+ *
+ * The bundle is deployed before the connect button is offered, so that the flow can
+ * be tested against Epic's sandbox while legal review is still outstanding. Gating on
+ * a token keeps the public site honest in the meantime: the landing page says the
+ * flow is unavailable, and /ehr-connect agrees rather than quietly working for anyone
+ * who guesses the URL.
+ *
+ * The cookie exists because Epic redirects back to /ehr-callback without our query
+ * string, so the grant has to survive the round trip.
+ */
+function retrieverAllowed(request: Request, url: URL, env: Env): boolean {
+    if (env.EPIC_CLIENT_ID) return true;
+    if (!env.PREVIEW_TOKEN) return false;
+    if (url.searchParams.get('preview') === env.PREVIEW_TOKEN) return true;
+    const cookie = request.headers.get('cookie') || '';
+    return cookie.split(';').some(c => c.trim() === `${PREVIEW_COOKIE}=${env.PREVIEW_TOKEN}`);
 }
 
 /**
@@ -88,15 +112,23 @@ export default {
         // Epic redirects here after authorization. The retriever is a single page that
         // reads the code from the query string, so hand back the same document with the
         // query preserved rather than redirecting.
-        if (path === '/ehr-callback' || path === '/ehr-connect') {
-            const page = await env.ASSETS.fetch(new URL('/ehretriever.html', url).toString());
-            if (page.status === 200) {
-                return withHeaders(page, { 'Cache-Control': 'no-store' });
+        if (path === '/ehr-callback' || path === '/ehr-connect' || path === '/ehretriever.html') {
+            if (!retrieverAllowed(request, url, env)) {
+                return withHeaders(Response.redirect(new URL('/#connect', url).toString(), 302));
             }
-            // Registration is not complete yet, so the retriever has not been built in.
-            return withHeaders(
-                Response.redirect(new URL('/#connect', url).toString(), 302)
-            );
+            const page = await env.ASSETS.fetch(new URL('/ehretriever.html', url).toString());
+            if (page.status !== 200) {
+                // Bundle not deployed yet.
+                return withHeaders(Response.redirect(new URL('/#connect', url).toString(), 302));
+            }
+            const res = withHeaders(page, { 'Cache-Control': 'no-store' });
+            if (!env.EPIC_CLIENT_ID && url.searchParams.get('preview') === env.PREVIEW_TOKEN) {
+                res.headers.append(
+                    'Set-Cookie',
+                    `${PREVIEW_COOKIE}=${env.PREVIEW_TOKEN}; Path=/; Max-Age=3600; Secure; HttpOnly; SameSite=Lax`
+                );
+            }
+            return res;
         }
 
         if (path === '/healthz') {
@@ -104,6 +136,7 @@ export default {
             return withHeaders(Response.json({
                 ok: true,
                 connectEnabled: Boolean(env.EPIC_CLIENT_ID),
+                retrieverDeployed: (await env.ASSETS.fetch(new URL('/ehretriever.html', url).toString())).status === 200,
                 brands: brands
                     ? { present: true, bytes: brands.size, uploaded: brands.uploaded, ...brands.customMetadata }
                     : { present: false },
