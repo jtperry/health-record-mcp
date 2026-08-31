@@ -1,43 +1,16 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Get a copy of your own medical record</title>
-<meta name="description" content="Download a complete, machine-readable copy of your medical record from your health system, directly to your own computer.">
-<link rel="icon" type="image/png" href="/icon.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="stylesheet" href="/fonts/fonts.css">
-<style>
-  *, *::before, *::after { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-  body { margin: 0; background: #ffffff; color: #0d1b2a; }
-  a { color: #0b4f8a; }
-  img { max-width: 100%; }
-  /* Hover states hoisted from the design's style-hover attributes. */
-[data-hover="hv0"]:hover { background:#073a68; }
-[data-hover="hv1"]:hover { color:#0b4f8a; text-decoration:underline; }
-[data-hover="hv2"]:hover { text-decoration:underline; }
-[data-hover="hv3"]:hover { color:#0b4f8a; text-decoration:underline; }
-[data-hover="hv4"]:hover { color:#0b4f8a; text-decoration:underline; }
-[data-hover="hv5"]:hover { color:#0b4f8a; text-decoration:underline; }
-[data-hover="hv6"]:hover { color:#0b4f8a; text-decoration:underline; }
-[data-hover="hv7"]:hover { color:#0b4f8a; text-decoration:underline; }
-[data-hover="hv8"]:hover { background:#073a68; }
-[data-hover="hv9"]:hover { background:#073a68; border-color:#073a68; }
-  /* The gate is enforced with the disabled attribute; these only reflect it. */
-  #connect-btn[disabled] { opacity: .45; cursor: not-allowed; }
-  #consent[disabled] { cursor: not-allowed; }
-  @media (max-width: 900px) {
-    .toc-rail-wrap { display: none; }
-    [style*="grid-template-columns:212px"] { display: block !important; }
-  }
-</style>
+<script src="./support.js"></script>
 </head>
 <body>
-
-
+<x-dc>
 <helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..700;1,8..60,400&family=Public+Sans:ital,wght@0,300..700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
   html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: #eef2f7; color: #0d1b2a; font-family: "Public Sans", "Helvetica Neue", Helvetica, sans-serif; }
@@ -85,7 +58,7 @@
         <p style="margin:0 0 20px; font-size:19.5px; line-height:1.6; color:#223549; max-width:34em;">Connect to your health system and download a complete, machine-readable copy of your medical record — conditions, medications, lab results, immunizations, clinical notes and attachments — directly to your own computer.</p>
         <p style="margin:0 0 30px; font-size:17px; line-height:1.65; color:#3f5265; max-width:34em;">Federal law gives you the right to this data. This tool helps you exercise it.</p>
         <p style="margin:0 0 26px; font-size:17px; line-height:1.65; color:#223549; max-width:34em;"><strong style="font-weight:700;">The copy is yours. So is the responsibility for protecting it.</strong> You must read the warning before you can connect.</p>
-        <a href="#warning" style="display:inline-flex; align-items:center; gap:10px; min-height:52px; padding:0 30px; background:#0b4f8a; color:#ffffff; font-size:16.5px; font-weight:600; text-decoration:none; border-radius:3px;" data-hover="hv0">Start by reading the warning</a>
+        <a href="#warning" style="display:inline-flex; align-items:center; gap:10px; min-height:52px; padding:0 30px; background:#0b4f8a; color:#ffffff; font-size:16.5px; font-weight:600; text-decoration:none; border-radius:3px;" style-hover="background:#073a68;">Start by reading the warning</a>
       </div>
 
       <aside aria-labelledby="hero-note" class="fc-border" style="border:1px solid #9fb8d0; background:#e7eef6; border-radius:4px; padding:28px 30px;">
@@ -100,20 +73,20 @@
   <div class="page-grid" style="max-width:1180px; margin:0 auto; padding:0 40px; display:grid; grid-template-columns:212px minmax(0,1fr); gap:64px; align-items:start;">
 
     <div class="toc-rail-wrap" style="position:sticky; top:112px; padding:56px 0 40px;">
-      
+      <sc-if value="{{ showToc }}" hint-placeholder-val="{{ true }}">
         <nav aria-labelledby="toc-heading">
           <p id="toc-heading" style="margin:0 0 18px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#4a5c70;">On this page</p>
-          <ul style="margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:2px; border-left:1px solid #ccd7e3;">
-            <li><a href="#law" data-toc="law" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" data-hover="hv1">Federal law is on your side</a></li>
-            <li><a href="#warning" data-toc="warning" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#0b4f8a; text-decoration:none; font-weight:700;" data-hover="hv2">Before you begin</a></li>
-            <li><a href="#architecture" data-toc="architecture" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" data-hover="hv3">We never see your record</a></li>
-            <li><a href="#steps" data-toc="steps" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" data-hover="hv4">If you proceed</a></li>
-            <li><a href="#connect" data-toc="connect" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" data-hover="hv5">Connect</a></li>
-            <li><a href="#disclaimer" data-toc="disclaimer" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" data-hover="hv6">Disclaimer</a></li>
-            <li><a href="#references" data-toc="references" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" data-hover="hv7">References</a></li>
+          <ul ref="{{ tocRef }}" style="margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:2px; border-left:1px solid #ccd7e3;">
+            <li><a href="#law" data-toc="law" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" style-hover="color:#0b4f8a; text-decoration:underline;">Federal law is on your side</a></li>
+            <li><a href="#warning" data-toc="warning" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#0b4f8a; text-decoration:none; font-weight:700;" style-hover="text-decoration:underline;">Before you begin</a></li>
+            <li><a href="#architecture" data-toc="architecture" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" style-hover="color:#0b4f8a; text-decoration:underline;">We never see your record</a></li>
+            <li><a href="#steps" data-toc="steps" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" style-hover="color:#0b4f8a; text-decoration:underline;">If you proceed</a></li>
+            <li><a href="#connect" data-toc="connect" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" style-hover="color:#0b4f8a; text-decoration:underline;">Connect</a></li>
+            <li><a href="#disclaimer" data-toc="disclaimer" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" style-hover="color:#0b4f8a; text-decoration:underline;">Disclaimer</a></li>
+            <li><a href="#references" data-toc="references" style="display:block; padding:9px 0 9px 16px; margin-left:-1px; border-left:2px solid transparent; font-size:14.5px; line-height:1.35; color:#33465b; text-decoration:none;" style-hover="color:#0b4f8a; text-decoration:underline;">References</a></li>
           </ul>
         </nav>
-      
+      </sc-if>
     </div>
 
     <main id="main" style="padding:56px 0 0; max-width:44em;">
@@ -194,7 +167,7 @@
             <p style="margin:0 0 32px; font-size:18px; font-weight:700; line-height:1.6; color:#10283f;">If you are not prepared to secure this file yourself, do not proceed.</p>
 
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:18px; padding-top:28px; border-top:1px solid #9fb8d0;">
-              <a href="#connect" style="display:inline-flex; align-items:center; min-height:52px; padding:0 28px; background:#0b4f8a; color:#ffffff; font-size:16.5px; font-weight:600; text-decoration:none; border-radius:3px;" data-hover="hv8">I have read the warning — continue</a>
+              <a href="#connect" onClick="{{ onAcknowledge }}" style="display:inline-flex; align-items:center; min-height:52px; padding:0 28px; background:#0b4f8a; color:#ffffff; font-size:16.5px; font-weight:600; text-decoration:none; border-radius:3px;" style-hover="background:#073a68;">I have read the warning — continue</a>
               <p style="margin:0; max-width:26em; font-size:15px; line-height:1.55; color:#33465b;">The consent statement and the connect button stay locked until you confirm you have read this section.</p>
             </div>
           </div>
@@ -241,15 +214,15 @@
         <h2 id="connect-h" style="margin:0 0 26px; font-family:'Source Serif 4',Georgia,serif; font-weight:400; font-size:36px; line-height:1.15; letter-spacing:-0.01em; color:#0d1b2a;">Connect</h2>
         <div class="fc-border" style="border:1px solid #ccd7e3; border-radius:4px; background:#fbfcfe; padding:32px;">
 
-          <p role="status" style="margin:0 0 24px; padding:14px 18px; background:#e7eef6; border:1px solid #9fb8d0; border-radius:3px; font-size:15.5px; line-height:1.6; color:#10283f;">Read the warning section above, then confirm you have read it. The consent statement and connect button unlock after that.</p>
+          <p role="status" ref="{{ statusRef }}" style="margin:0 0 24px; padding:14px 18px; background:#e7eef6; border:1px solid #9fb8d0; border-radius:3px; font-size:15.5px; line-height:1.6; color:#10283f;">Read the warning section above, then confirm you have read it. The consent statement and connect button unlock after that.</p>
 
-          <div style="display:grid; grid-template-columns:26px minmax(0,1fr); gap:16px; align-items:start; padding-bottom:26px; border-bottom:1px solid #d9e2ec;">
-            <input id="consent" type="checkbox" disabled aria-describedby="consent-text" style="width:22px; height:22px; margin:3px 0 0; accent-color:#0b4f8a; cursor:pointer;" />
+          <div ref="{{ consentBoxRef }}" style="display:grid; grid-template-columns:26px minmax(0,1fr); gap:16px; align-items:start; padding-bottom:26px; border-bottom:1px solid #d9e2ec;">
+            <input id="consent" type="checkbox" ref="{{ checkboxRef }}" onChange="{{ onToggle }}" aria-describedby="consent-text" style="width:22px; height:22px; margin:3px 0 0; accent-color:#0b4f8a; cursor:pointer;" />
             <label id="consent-text" for="consent" style="font-size:16.5px; line-height:1.65; color:#223549; cursor:pointer;">I have read the warning above. I understand that a copy of my medical record will be stored on this device, that HIPAA protections do not extend to that copy, and that I am solely responsible for its security. I accept the <a href="https://health.circlejtp.me/terms">Terms and Conditions</a>, and that the operator of this site bears no responsibility or liability for it.</label>
           </div>
 
           <div style="display:flex; flex-wrap:wrap; align-items:center; gap:20px; padding-top:26px;">
-            <button type="button" id="connect-btn" disabled style="display:inline-flex; align-items:center; justify-content:center; min-height:56px; padding:0 34px; border:2px solid #0b4f8a; border-radius:3px; font-family:'Public Sans',Helvetica,sans-serif; font-size:17px; font-weight:600; cursor:pointer; background:#0b4f8a; color:#ffffff;" data-hover="hv9">Connect to my health system</button>
+            <button type="button" ref="{{ connectRef }}" onClick="{{ onConnect }}" style="display:inline-flex; align-items:center; justify-content:center; min-height:56px; padding:0 34px; border:2px solid #0b4f8a; border-radius:3px; font-family:'Public Sans',Helvetica,sans-serif; font-size:17px; font-weight:600; cursor:pointer; background:#0b4f8a; color:#ffffff;" style-hover="background:#073a68; border-color:#073a68;">Connect to my health system</button>
             <p style="margin:0; max-width:24em; font-family:'IBM Plex Mono',monospace; font-size:12.5px; line-height:1.55; color:#3f5265;">You will be redirected to your health system to sign in. We never see your credentials.</p>
           </div>
         </div>
@@ -337,101 +310,90 @@
   </footer>
 </div>
 
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;gateConnect&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Behavior&quot;},&quot;showToc&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Behavior&quot;}}">
+class Component extends DCLogic {
+  state = { accepted: false, warningRead: false, active: "law" };
 
+  componentDidMount() {
+    ["law", "warning", "architecture", "steps", "connect", "disclaimer", "references"].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (!this.obs) {
+        this.obs = new IntersectionObserver((entries) => {
+          const vis = entries.filter(e => e.isIntersecting)
+            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          if (vis.length) this.setState({ active: vis[0].target.id });
+        }, { rootMargin: "-100px 0px -60% 0px" });
+      }
+      this.obs.observe(el);
+    });
+    // Reading the end of the warning also unlocks consent.
+    const warn = document.getElementById("warning");
+    this.paintGate();
+    if (warn) {
+      this.endObs = new IntersectionObserver((entries) => {
+        if (entries.some(e => e.isIntersecting)) this.setState({ warningRead: true });
+      }, { rootMargin: "0px 0px -20% 0px" });
+      this.endObs.observe(warn.lastElementChild || warn);
+    }
+  }
+  componentWillUnmount() {
+    if (this.obs) this.obs.disconnect();
+    if (this.endObs) this.endObs.disconnect();
+  }
 
-
-<script>
-/*
- * Consent gate.
- *
- * Reimplemented from the design prototype, which expressed this through the
- * Claude Design canvas runtime (support.js) and gated the button with
- * aria-disabled plus pointer-events. That is not enforcement: keyboard users and
- * assistive technology can still activate such a control. Here the platform
- * `disabled` attribute does the gating, and the visual state only reflects it.
- *
- * Three conditions, all required:
- *   1. the warning has been scrolled to the end   -> unlocks the checkbox
- *   2. the checkbox is ticked                     -> unlocks the button
- *   3. a client id is configured on the Worker    -> the flow exists at all
- *
- * Consent is deliberately not persisted; it must be given on every visit.
- */
-(function () {
-  var cb = document.getElementById('consent');
-  var btn = document.getElementById('connect-btn');
-  var status = document.querySelector('#connect [role="status"]');
-  var warning = document.getElementById('warning');
-  var consentBox = cb ? cb.parentElement : null;
-  if (!cb || !btn) return;
-
-  var connectEnabled = document.documentElement.dataset.connectEnabled === 'true';
-  var warningRead = false;
-
-  cb.checked = false;
-
-  function paint() {
-    cb.disabled = !warningRead;
-    if (consentBox) consentBox.style.opacity = warningRead ? '1' : '0.55';
-    btn.disabled = !(warningRead && cb.checked && connectEnabled);
-
-    if (!status) return;
-    if (!warningRead) {
-      status.textContent = 'Locked: read the warning section above, then confirm you have read it.';
-    } else if (!cb.checked) {
-      status.textContent = 'Warning read. Now check the consent statement below to unlock the connect button.';
-    } else if (!connectEnabled) {
-      status.textContent = 'Not yet available: this tool is pending application registration with the EHR vendor. The connect flow will be enabled once that is approved.';
-    } else {
-      status.textContent = 'Ready. Connecting will send you to your health system to sign in.';
+  paintToc() {
+    if (!this.tocEl) return;
+    this.tocEl.querySelectorAll("[data-toc]").forEach(a => {
+      const on = a.dataset.toc === this.state.active;
+      const warn = a.dataset.toc === "warning";
+      a.style.borderLeftColor = on ? "#0b4f8a" : "transparent";
+      a.style.color = on || warn ? "#0b4f8a" : "#33465b";
+      a.style.fontWeight = on || warn ? "700" : "400";
+      if (on) { a.setAttribute("aria-current", "true"); } else { a.removeAttribute("aria-current"); }
+    });
+  }
+  paintGate() {
+    const gate = this.props.gateConnect ?? true;
+    const warningRead = gate ? this.state.warningRead : true;
+    const accepted = gate ? (warningRead && this.state.accepted) : true;
+    if (this.cbEl) {
+      this.cbEl.disabled = !warningRead;
+      this.cbEl.checked = accepted;
+    }
+    if (this.consentBoxEl) this.consentBoxEl.style.opacity = warningRead ? "1" : "0.55";
+    if (this.connectEl) {
+      this.connectEl.setAttribute("aria-disabled", accepted ? "false" : "true");
+      this.connectEl.style.opacity = accepted ? "1" : "0.5";
+      this.connectEl.style.pointerEvents = accepted ? "auto" : "none";
+    }
+    if (this.statusEl) {
+      this.statusEl.textContent = !warningRead
+        ? "Locked: read the warning section above, then confirm you have read it. The consent statement and connect button unlock after that."
+        : (this.state.accepted
+            ? "Ready. Selecting connect will send you to your health system to sign in."
+            : "Warning read. Now check the consent statement below to unlock the connect button.");
     }
   }
 
-  if (warning && 'IntersectionObserver' in window) {
-    var sentinel = warning.lastElementChild || warning;
-    var obs = new IntersectionObserver(function (entries) {
-      if (entries.some(function (e) { return e.isIntersecting; })) {
-        warningRead = true;
-        obs.disconnect();
-        paint();
-      }
-    }, { rootMargin: '0px 0px -20% 0px' });
-    obs.observe(sentinel);
-  } else {
-    // Without IntersectionObserver the scroll requirement cannot be observed;
-    // fall back to the checkbox alone rather than locking the user out.
-    warningRead = true;
+  componentDidUpdate() { this.paintToc(); this.paintGate(); }
+
+  renderVals() {
+    return {
+      showToc: this.props.showToc ?? true,
+      statusRef: (el) => { this.statusEl = el; this.paintGate(); },
+      consentBoxRef: (el) => { this.consentBoxEl = el; this.paintGate(); },
+      checkboxRef: (el) => { this.cbEl = el; this.paintGate(); },
+      connectRef: (el) => { this.connectEl = el; this.paintGate(); },
+      onAcknowledge: () => this.setState({ warningRead: true }),
+      onToggle: () => this.setState(s => ({ accepted: !s.accepted })),
+      onConnect: () => {},
+      tocRef: (el) => { this.tocEl = el; this.paintToc(); }
+    };
   }
+}
 
-  cb.addEventListener('change', paint);
-  btn.addEventListener('click', function () {
-    if (btn.disabled) return;
-    window.location.href = '/ehr-connect';
-  });
-
-  // Table-of-contents highlighting.
-  var toc = document.querySelectorAll('[data-toc]');
-  if (toc.length && 'IntersectionObserver' in window) {
-    var ids = ['law','warning','architecture','steps','connect','disclaimer','references'];
-    var spy = new IntersectionObserver(function (entries) {
-      var vis = entries.filter(function (e) { return e.isIntersecting; })
-        .sort(function (a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
-      if (!vis.length) return;
-      var active = vis[0].target.id;
-      toc.forEach(function (a) {
-        var on = a.dataset.toc === active;
-        var isWarning = a.dataset.toc === 'warning';
-        a.style.borderLeftColor = on ? '#0b4f8a' : 'transparent';
-        a.style.color = (on || isWarning) ? '#0b4f8a' : '#33465b';
-        a.style.fontWeight = (on || isWarning) ? '700' : '400';
-        if (on) { a.setAttribute('aria-current', 'true'); } else { a.removeAttribute('aria-current'); }
-      });
-    }, { rootMargin: '-100px 0px -60% 0px' });
-    ids.forEach(function (id) { var el = document.getElementById(id); if (el) spy.observe(el); });
-  }
-
-  paint();
-})();
 </script>
 </body>
 </html>
