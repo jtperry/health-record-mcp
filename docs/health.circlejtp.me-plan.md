@@ -414,6 +414,38 @@ Settings worth not changing without understanding why:
 Fields that did not persist through the first save, so re-check them: **Public Documentation
 URL** reverted to the `http://www.example.com` placeholder.
 
+### Submitted copy
+
+Patients see these on Epic's consent screen, and Epic's reviewers read them, so both lead with
+the data flow rather than with features: that is the unusual property here, it is the basis for
+every privacy claim the site makes, and it distinguishes this from apps that aggregate records
+server-side. The responsibility shift is stated here as well as on the site so the registration
+matches what a patient actually encounters.
+
+**Summary**
+
+> This app lets you download a copy of your own health record as a JSON file directly to your
+> device, after you acknowledge that securing that data becomes your responsibility. It is
+> intended to help people study and understand their own health history.
+
+**Description**
+
+> My Health Record Access helps you obtain a complete copy of your own medical record and save
+> it directly to your computer, in a standard machine-readable format you can keep, search, and
+> use however you choose.
+>
+> You sign in with your health system directly — this app never sees your username or password.
+> Your record is then fetched by your own browser and written straight to your device. It is
+> never transmitted to, or stored on, any server operated by this app. There are no accounts,
+> and no tracking of your health information.
+>
+> Because the copy lives on your device, protecting it becomes your responsibility. HIPAA's
+> protections apply to your health system, not to a file on your own computer. The app states
+> this plainly before you connect and asks you to acknowledge it.
+>
+> Federal law — the 21st Century Cures Act and your HIPAA right of access — gives you the right
+> to this data. This is an independent, free, non-commercial tool that helps you exercise it.
+
 Still outstanding on the form: Terms and Conditions URL (now `https://health.circlejtp.me/terms`),
 the Description field, the Data Use Questionnaire, and accepting the open.epic terms of use.
 
