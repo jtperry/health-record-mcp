@@ -85,13 +85,31 @@ including this one.
 
 **2. Print the list** (read-only; in Chrome it also copies to the clipboard):
 
+Wrapped in an IIFE deliberately: the page defines a global `opts`, and a top-level `const opts`
+fails with "Can't create duplicate variable that shadows a global property". It returns the list
+as a string so it prints in the console result for right-click → Copy, rather than relying on
+`copy()`, which differs between Safari and Chrome.
+
 ```js
-const opts = [...document.querySelectorAll('#WebServicesChosen option[data-uscdi-readonly="True"]')];
-const names = opts.map(o => o.textContent.trim()).sort();
-console.log(`USCDI-eligible APIs on this form: ${names.length}`);
-console.log(names.join('\n'));
-copy(names.join('\n'));   // Chrome DevTools only
+(() => {
+  let found = [...document.querySelectorAll('#WebServicesChosen option[data-uscdi-readonly="True"]')];
+  if (!found.length) {
+    const any = [...document.querySelectorAll('[data-uscdi-readonly]')];
+    console.log('fallback: elements carrying the attribute =', any.length);
+    if (any.length) {
+      console.log('example parent:', any[0].parentElement && any[0].parentElement.id);
+      found = any.filter(el => el.getAttribute('data-uscdi-readonly') === 'True');
+    }
+  }
+  const list = found.map(el => el.textContent.trim()).filter(Boolean).sort();
+  console.log('USCDI-eligible APIs: ' + list.length);
+  console.log(list.join('\n'));
+  return list.join('\n');
+})();
 ```
+
+A count of 0 with a non-zero fallback line means Epic moved the attribute to a different
+container; the logged parent id says where.
 
 **3. Select exactly those.** Epic's page loads jQuery, so the original recipe works:
 
@@ -102,17 +120,24 @@ $("#WebServicesChosen option[data-uscdi-readonly=True]").each((i, item) => {
 })
 ```
 
-Equivalent without jQuery:
+Equivalent without jQuery, likewise wrapped:
 
 ```js
-const ids = [...document.querySelectorAll('#WebServicesChosen option[data-uscdi-readonly="True"]')].map(o => o.value);
-let hit = 0;
-ids.forEach(id => {
-  const li = document.querySelector(`#availableWebServices li[id="${CSS.escape(id)}"]`);
-  if (li) { li.classList.add('active'); hit++; }
-});
-console.log(`highlighted ${hit} of ${ids.length}`);
+(() => {
+  const ids = [...document.querySelectorAll('#WebServicesChosen option[data-uscdi-readonly="True"]')]
+    .map(o => o.value);
+  let hit = 0;
+  ids.forEach(id => {
+    const li = document.querySelector('#availableWebServices li[id="' + CSS.escape(id) + '"]');
+    if (li) { li.classList.add('active'); hit++; }
+  });
+  console.log('highlighted ' + hit + ' of ' + ids.length);
+  return hit;
+})();
 ```
+
+**Use Chrome.** If `highlighted N of N` succeeds but `>>` moves nothing, the widget is driven by
+JS events rather than the `active` class alone; the recipe was written against Chrome.
 
 Then click `>>`.
 
