@@ -388,15 +388,25 @@ distribution, which is what makes an app unusable at a health system like Mayo.
 
 ## 8. Build order
 
-1. Register the domain / DNS for `health.circlejtp.me`
-2. Ship the landing page — **the warning and consent gate are part of v1, not a follow-up**
-3. Stand up the brand refresh job; publish `epic.json` to R2
-4. Wire the retriever build to the R2 brand file; verify a real connect end to end
-5. Legal review (§11) — a gate, not a formality, given §9.1
-6. Only then: submit the Epic app registration with the live documentation URL
+| # | Step | Status |
+|---|---|---|
+| 1 | Domain / DNS for `health.circlejtp.me` | **done** — custom domain on the Worker |
+| 2 | Ship the landing page (warning + consent gate are v1, not a follow-up) | **done** — live |
+| 3 | Brand refresh job; publish `epic.json` to R2 | **done** — seeded, weekly cron `0 6 * * SUN` |
+| 4 | Wire the retriever build to the brand file; verify a real connect end to end | not started |
+| 5 | Legal review (§11) — a gate, not a formality, given §9.1 | **outstanding** |
+| 6 | Submit the Epic app registration with the live documentation URL | ready to submit |
 
-Steps 2 and 5 gate everything. Do not point Epic at a page whose legal language has not been
-reviewed.
+**Deployed 2026-08-30 with `EPIC_CLIENT_ID` empty.** This was deliberate: it gives Epic a live
+Public Documentation URL to review, so registration lead time runs in parallel with legal
+review rather than after it, while nobody can actually download a record. The page states
+plainly that the connect flow is unavailable instead of offering a button that would fail.
+
+Two independent things must both land before anyone can use it — setting `EPIC_CLIENT_ID`,
+and building the retriever bundle into the site. Neither happens by accident, so steps 4 and 5
+still gate the functional launch.
+
+Do not enable the connect flow on a page whose legal language has not been reviewed.
 
 ---
 
