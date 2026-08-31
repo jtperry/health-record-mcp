@@ -141,12 +141,36 @@ JS events rather than the `active` class alone; the recipe was written against C
 
 Then click `>>`.
 
-**4. Verify before saving.** The banner must read:
+**4. Verify by counting, not by looking.** The Selected list is not ordered alphabetically, so
+scrolling it is misleading — the top can show only DSTU2/STU3 entries while the R4 ones sit
+further down, which looks exactly like a failed selection.
 
-> Client IDs for this app **WILL** be automatically downloaded to certain customer systems
-> upon marking it ready for production.
+```js
+(() => {
+  const lists = document.querySelectorAll('ul[id*="ebService"], select[id*="ebService"]');
+  lists.forEach(l => console.log(l.tagName, '#' + l.id, '→ items:', l.children.length));
+  const chosen = [...document.querySelectorAll('#WebServicesChosen option')];
+  const uscdi  = chosen.filter(o => o.getAttribute('data-uscdi-readonly') === 'True');
+  console.log('picker total:', chosen.length, '| USCDI-marked:', uscdi.length);
+})();
+```
 
-Anything else means something outside USCDI is still selected.
+Observed 2026-08-30, and the arithmetic is the check:
+
+```
+#WebServicesChosen    695   full catalogue
+#availableWebServices 448   left unselected
+#selectedWebServices  247   selected        448 + 247 = 695 ✓
+```
+
+`#selectedWebServices` must equal the USCDI-marked count. If it is short, the likely cause is
+that the previous selection was still present when the snippet read the list: clear Selected
+completely, re-run the snippet, click `>>`, and re-count.
+
+**Do not rely on the confirmation banner.** It reads "This app will be automatically downloaded
+to all qualifying customers upon marking it ready for production" both when nothing is selected
+and when the correct set is selected, so it tracks the Automatic Client Distribution radio
+rather than validating the API list. The item count is the only real check.
 
 Selecting all USCDI-marked entries pulls in some DSTU2/STU3 variants alongside R4. That is
 harmless — they are all in the qualifying set — and it matches the recipe known to produce the
