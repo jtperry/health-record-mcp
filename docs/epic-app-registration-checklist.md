@@ -66,8 +66,33 @@ Based on what real pulls actually returned across MultiCare, Mayo, UW and ZoomCa
 - [ ] `Organization`
 - [ ] `Location`
 
-**Skip anything Epic flags as outside USCDI v3.** Coverage is worth keeping if offered;
-losing auto-distribution to gain it is a bad trade.
+### Do not select "every R4"
+
+Selecting every R4 API **disqualifies the app from automatic distribution**. Epic's rule is
+that a qualifying app's APIs must be limited to the USCDI set; anything outside it reverts to
+manual per-organization approval, which is the failure mode that makes an app unreachable at
+a health system like Mayo Clinic. Roughly 131 APIs are inside USCDI and 200+ are outside.
+
+The `USCDI v3` radio keeps showing its reassuring banner regardless — that banner reflects the
+radio button, not a validation of the API selections. The disqualification surfaces later, when
+marking the app ready for production.
+
+**Use Epic's own marking rather than guessing.** Each option in the API picker carries
+`data-uscdi-readonly="True"` when it is in the USCDI set. To audit the current state, from the
+browser console on the registration page (read-only):
+
+```js
+const marked = [...document.querySelectorAll('[data-uscdi-readonly]')];
+const uscdi  = marked.filter(el => el.getAttribute('data-uscdi-readonly') === 'True');
+console.log(`options carrying the marker: ${marked.length}, of which USCDI: ${uscdi.length}`);
+```
+
+Clear the Selected box and re-add only the marked options. A community snippet that batch-selects
+on the same attribute is at <https://gist.github.com/cooperka/c9d325983af71c73e65a654f9b9a0aff> —
+third-party code, so check the resulting Selected list before saving.
+
+`Binary.Read (Clinical Notes)` and `Binary.Read (Generated CDAs)` are both inside USCDI, so
+clinical notes survive the trim. Generated CDAs feed the C-CDA parser in `src/ccdaToEhr.ts`.
 
 ## Later pages
 
@@ -79,6 +104,9 @@ losing auto-distribution to gain it is a bad trade.
 - [ ] **PKCE** → `S256` (already implemented in `ehretriever.ts`)
 - [ ] **FHIR version** → `R4`
 - [ ] Production redirect URIs must be **HTTPS** — no plain-http entries.
+- [ ] A `localhost` redirect is fine during the Test phase, but Epic may block *marking the
+      app ready for production* while one is present. Remove it at that point;
+      `health.circlejtp.me/ehr-callback` is the one that matters.
 
 ---
 
