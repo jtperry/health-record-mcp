@@ -1,0 +1,22 @@
+[     300ms] [LOG] Initial page load. Setting up brand selector. @ https://health.circlejtp.me/dist/ehretriever.bundle.js:13210
+[     301ms] [LOG] [fetchBrands] Function started. @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12770
+[     301ms] [LOG] [fetchBrands] Applying tag filters (OR groups of AND tags): [Array(2)] @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12791
+[     302ms] [LOG] [fetchBrands] Loading 1 brand files... @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12810
+[     387ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://health.circlejtp.me/favicon.ico:0
+[     392ms] [LOG] [fetchBrands] Loaded 1 brand files. [Array(1)] @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12827
+[     392ms] [LOG] [fetchBrands] Loaded 1 organization records from brand files. @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12832
+[     393ms] [LOG] Rendering page 1 of 1. Items 1-1 of 1. @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12562
+[   32288ms] [LOG] --- Brand Connect Button Clicked --- @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12748
+[   32288ms] [LOG] Selected Item: {searchName: epic fhir sandbox, displayName: Epic FHIR Sandbox, itemType: brand, city: null, state: WI} @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12749
+[   32288ms] [LOG] Using vendorConfig: {clientId: 8d804225-8ca7-430b-99f1-2b7762258e09, scopes: patient/*.read, redirectUrl: https://health.circlejtp.me/ehr-callback, note: Epic sandbox test patient - username 'fhircamila', password 'epicepic1'} @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12750
+[   32288ms] [LOG] Found FHIR Endpoint: https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/ @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12758
+[   32289ms] [LOG] [initiateSmartAuth] Starting for FHIR Base URL: https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/, VendorLabel: Epic FHIR Sandbox @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12670
+[   32289ms] [LOG] Status: Preparing authorization request... @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12380
+[   32289ms] [LOG] [initiateSmartAuth] Using VendorAuthConfig: {clientId: 8d804225-8ca7-430b-99f1-2b7762258e09, scopes: patient/*.read, redirectUrl: https://health.circlejtp.me/ehr-callback, note: Epic sandbox test patient - username 'fhircamila', password 'epicepic1'} @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12681
+[   32289ms] [LOG] Status: Performing SMART discovery... @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12380
+[   32289ms] [LOG] [initiateSmartAuth] Attempting SMART discovery at: https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/.well-known/smart-configuration @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12686
+[   32635ms] [LOG] Status: SMART discovery successful. @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12380
+[   32635ms] [LOG] Status: Generating security parameters... @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12380
+[   32638ms] [LOG] [initiateSmartAuth] Stored auth state in sessionStorage @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12712
+[   32638ms] [LOG] Status: Redirecting to EHR for authorization... @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12380
+[   32638ms] [LOG] [initiateSmartAuth] Redirecting to: https://fhir.epic.com/interconnect-fhir-oauth/oauth2/authorize?response_type=code&client_id=8d804225-8ca7-430b-99f1-2b7762258e09&scope=patient%2F*.read&redirect_uri=https%3A%2F%2Fhealth.circlejtp.me%2Fehr-callback&state=-YVKwF2FMiOLRvWI0YM2pmOGu3wTZki-x1.jTkz4&aud=https%3A%2F%2Ffhir.epic.com%2Finterconnect-fhir-oauth%2Fapi%2FFHIR%2FR4%2F&code_challenge=rXtB2k3W5GPxKcZz1IGnqL_D_Veg5tPSI5gdS7kbTz0&code_challenge_method=S256 @ https://health.circlejtp.me/dist/ehretriever.bundle.js:12723

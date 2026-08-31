@@ -1,0 +1,5 @@
+- generic [ref=e2]:
+  - heading "Connect to your record" [level=1] [ref=e3]
+  - generic [ref=e4]:
+    - generic [ref=e5]: Loading organizations data...
+    - searchbox "Search by name, provider, city, state, zip..." [disabled] [ref=e8]

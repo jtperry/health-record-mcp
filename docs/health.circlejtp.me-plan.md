@@ -571,6 +571,43 @@ record data would render them false with no way to correct them.
 Still outstanding on the form: Terms and Conditions URL (now `https://health.circlejtp.me/terms`),
 the Description field, the Data Use Questionnaire, and accepting the open.epic terms of use.
 
+### 7.2 Sandbox testing notes (2026-08-30)
+
+First end-to-end attempt against Epic's sandbox, driven through a real browser.
+
+**Working:** the preview gate, the sandbox brand file, SMART discovery, and the authorize URL
+the retriever builds:
+
+```
+client_id=8d804225-8ca7-430b-99f1-2b7762258e09   (non-production)
+scope=patient/*.read                              (SMART v1, as registered)
+redirect_uri=https://health.circlejtp.me/ehr-callback
+code_challenge_method=S256
+```
+
+**Blocked at Epic's authorize step** with a generic "OAuth2 Error — Something went wrong trying
+to authorize the client."
+
+Diagnosis by elimination, since the error text carries no detail:
+
+| Variable | Result |
+|---|---|
+| `aud` with vs without trailing slash | no difference |
+| `patient/*.read` vs `openid fhirUser patient/Patient.read` | no difference |
+| Upstream's known sandbox client id | same error |
+| **All-zeros bogus client id** | **identical error** |
+
+The bogus-client control is the informative one: Epic returns this page for a client it does
+not recognise, and our client is indistinguishable from one that does not exist. So the
+non-production client id is not yet active in the sandbox. Epic's documentation says app
+requests "typically appear within 5 minutes, but please allow an hour" after marking ready.
+Retry rather than change configuration — nothing in the request is wrong.
+
+**Also observed:** SMART discovery returned `503 Service Unavailable` on the first attempt and
+succeeded on the next, with the endpoint returning 200 on five consecutive probes from outside
+the browser. Epic's sandbox discovery is intermittently flaky; a retry with backoff around
+discovery would turn a dead end into a hiccup.
+
 ---
 
 ## 8. Build order
