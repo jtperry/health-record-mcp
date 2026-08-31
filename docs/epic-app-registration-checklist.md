@@ -71,28 +71,66 @@ Based on what real pulls actually returned across MultiCare, Mayo, UW and ZoomCa
 Selecting every R4 API **disqualifies the app from automatic distribution**. Epic's rule is
 that a qualifying app's APIs must be limited to the USCDI set; anything outside it reverts to
 manual per-organization approval, which is the failure mode that makes an app unreachable at
-a health system like Mayo Clinic. Roughly 131 APIs are inside USCDI and 200+ are outside.
+a health system like Mayo Clinic.
 
-The `USCDI v3` radio keeps showing its reassuring banner regardless — that banner reflects the
-radio button, not a validation of the API selections. The disqualification surfaces later, when
-marking the app ready for production.
+**There is no published list.** Epic's patient-facing-apps documentation does not enumerate the
+qualifying APIs, and the app registration form has no USCDI filter in its search box. The form's
+own markup is the only authority: each qualifying option carries `data-uscdi-readonly="True"`
+inside the hidden `#WebServicesChosen` select.
 
-**Use Epic's own marking rather than guessing.** Each option in the API picker carries
-`data-uscdi-readonly="True"` when it is in the USCDI set. To audit the current state, from the
-browser console on the registration page (read-only):
+So extract the list from the form rather than working from any list written down elsewhere,
+including this one.
+
+**1. Clear the current selection.** Select everything in the Selected box and click `<<`.
+
+**2. Print the list** (read-only; in Chrome it also copies to the clipboard):
 
 ```js
-const marked = [...document.querySelectorAll('[data-uscdi-readonly]')];
-const uscdi  = marked.filter(el => el.getAttribute('data-uscdi-readonly') === 'True');
-console.log(`options carrying the marker: ${marked.length}, of which USCDI: ${uscdi.length}`);
+const opts = [...document.querySelectorAll('#WebServicesChosen option[data-uscdi-readonly="True"]')];
+const names = opts.map(o => o.textContent.trim()).sort();
+console.log(`USCDI-eligible APIs on this form: ${names.length}`);
+console.log(names.join('\n'));
+copy(names.join('\n'));   // Chrome DevTools only
 ```
 
-Clear the Selected box and re-add only the marked options. A community snippet that batch-selects
-on the same attribute is at <https://gist.github.com/cooperka/c9d325983af71c73e65a654f9b9a0aff> —
-third-party code, so check the resulting Selected list before saving.
+**3. Select exactly those.** Epic's page loads jQuery, so the original recipe works:
 
-`Binary.Read (Clinical Notes)` and `Binary.Read (Generated CDAs)` are both inside USCDI, so
-clinical notes survive the trim. Generated CDAs feed the C-CDA parser in `src/ccdaToEhr.ts`.
+```js
+$("#WebServicesChosen option[data-uscdi-readonly=True]").each((i, item) => {
+  var id = $(item).val()
+  $(`#availableWebServices li[id=${id}]`).addClass("active")
+})
+```
+
+Equivalent without jQuery:
+
+```js
+const ids = [...document.querySelectorAll('#WebServicesChosen option[data-uscdi-readonly="True"]')].map(o => o.value);
+let hit = 0;
+ids.forEach(id => {
+  const li = document.querySelector(`#availableWebServices li[id="${CSS.escape(id)}"]`);
+  if (li) { li.classList.add('active'); hit++; }
+});
+console.log(`highlighted ${hit} of ${ids.length}`);
+```
+
+Then click `>>`.
+
+**4. Verify before saving.** The banner must read:
+
+> Client IDs for this app **WILL** be automatically downloaded to certain customer systems
+> upon marking it ready for production.
+
+Anything else means something outside USCDI is still selected.
+
+Selecting all USCDI-marked entries pulls in some DSTU2/STU3 variants alongside R4. That is
+harmless — they are all in the qualifying set — and it matches the recipe known to produce the
+banner above, so prefer it over hand-trimming to R4 only.
+
+`Binary.Read (Clinical Notes)` and `Binary.Read (Generated CDAs)` are inside USCDI, so clinical
+notes survive the trim. Generated CDAs feed the C-CDA parser in `src/ccdaToEhr.ts`.
+
+Recipe adapted from <https://gist.github.com/cooperka/c9d325983af71c73e65a654f9b9a0aff>.
 
 ## Later pages
 
