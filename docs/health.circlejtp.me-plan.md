@@ -446,6 +446,37 @@ matches what a patient actually encounters.
 > Federal law — the 21st Century Cures Act and your HIPAA right of access — gives you the right
 > to this data. This is an independent, free, non-commercial tool that helps you exercise it.
 
+### Data Use Questionnaire answers
+
+Health systems rely on these when deciding whether to trust the app, so each is derived from
+what the code does rather than from what reads best.
+
+| Question | Answer |
+|---|---|
+| Where does this app store user data? | This app can store user data locally on the user's device |
+| Other than the user, who has access to user data? | No one; data never leaves the user's device |
+| Does the developer use data beyond providing direct services? | No |
+| What other individuals from the record does the app use data about? | No one |
+| Does the app allow users to obtain a complete record of data collected about them? | Yes, complete |
+| Does the app allow users to obtain a complete record of who accessed data about them? | Yes, complete |
+| Is user data retained after the user deletes the app / closes their account? | No |
+
+Notes on the two that required judgement. Nothing is collected and nobody accesses anything,
+and neither question offers an "N/A". "Yes, complete" was chosen because the "No" options carry
+a false implication — *does not allow users to obtain a record of the data stored about them*
+reads as withholding data the developer holds, and there is none. The counter-argument is that
+"Yes" may imply a data-access-request feature that does not exist; the substance is that there
+is nothing to show because nothing exists, and "Yes" conveys that better than "No".
+
+"This app does not store user data" was **not** selected: the download writes a file to the
+user's disk and sessionStorage briefly holds the token, both of which are storage on the
+device. The "users authorize" access options were not selected either, since the app provides
+no sharing mechanism — a user forwarding the file themselves is not the app granting access.
+
+**These answers commit the project to the browser-only architecture.** Combined with Epic
+making the app uneditable once production-ready, introducing any server-side component that
+received record data would render them false with no way to correct them.
+
 Still outstanding on the form: Terms and Conditions URL (now `https://health.circlejtp.me/terms`),
 the Description field, the Data Use Questionnaire, and accepting the open.epic terms of use.
 
