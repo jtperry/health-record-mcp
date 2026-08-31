@@ -154,6 +154,59 @@ function makeAbsoluteUrl(urlStr: string): string {
     }
 }
 
+/**
+ * Fetch with a short retry and errors that say what actually went wrong.
+ *
+ * Two real failure modes made this necessary:
+ *
+ *  - Epic's sandbox returned a single 503 for SMART discovery and succeeded on the
+ *    very next attempt, with the endpoint answering 200 on five consecutive probes
+ *    from outside the browser. One flaky response should not end the flow.
+ *  - When a host does not resolve at all — as happened when a brand directory entry
+ *    still pointed at a decommissioned endpoint — fetch rejects with a TypeError
+ *    instead of resolving with a status, so the `response.ok` check never runs and
+ *    the user is left with the browser's bare "Load failed", which reads like a bug
+ *    in this client rather than a stale directory entry.
+ *
+ * Only idempotent GETs should use this. The token exchange must not be retried: an
+ * authorization code is single-use, so a replay fails for a different reason and
+ * obscures the original error.
+ */
+async function fetchWithRetry(url: string, init: RequestInit = {}, attempts = 3): Promise<Response> {
+    let lastFailure = '';
+
+    for (let attempt = 0; attempt < attempts; attempt++) {
+        if (attempt > 0) {
+            const delayMs = 400 * Math.pow(3, attempt - 1); // 400ms, then 1200ms
+            updateStatus(`Connection problem; retrying (${attempt + 1} of ${attempts})...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+        try {
+            const response = await fetch(url, init);
+            // 5xx is usually transient. 4xx is not, so do not spend retries on it.
+            if (response.status >= 500 && attempt < attempts - 1) {
+                lastFailure = `${response.status} ${response.statusText}`;
+                console.warn(`[fetchWithRetry] ${lastFailure} from ${url}; retrying.`);
+                continue;
+            }
+            return response;
+        } catch (err: any) {
+            // fetch rejects rather than resolving on DNS failure, TLS failure,
+            // CORS rejection, and when offline.
+            lastFailure = err?.message || String(err);
+            console.warn(`[fetchWithRetry] Network failure for ${url}: ${lastFailure}`);
+        }
+    }
+
+    let host = url;
+    try { host = new URL(url).host; } catch { /* keep the raw string */ }
+    throw new Error(
+        `Could not reach ${host}. The server may be temporarily unavailable, or this ` +
+        `organization's directory entry may be out of date.` +
+        (lastFailure ? ` (${lastFailure})` : '')
+    );
+}
+
 // Function to generate a random string for state
 function generateRandomString(length = 40) {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
@@ -468,12 +521,15 @@ async function initiateSmartAuth(fhirBaseUrl: string, vendorAuthConfig: VendorAu
         const fhirBaseUrlWithSlash = fhirBaseUrl.endsWith('/') ? fhirBaseUrl : fhirBaseUrl + '/';
         const wellKnownUrlString = fhirBaseUrlWithSlash + '.well-known/smart-configuration';
         console.log(`[initiateSmartAuth] Attempting SMART discovery at: ${wellKnownUrlString}`);
-        const discoveryResponse = await fetch(wellKnownUrlString, {
+        const discoveryResponse = await fetchWithRetry(wellKnownUrlString, {
             headers: { 'Accept': 'application/json' }
         });
 
         if (!discoveryResponse.ok) {
-            throw new Error(`SMART discovery failed: ${discoveryResponse.status} ${discoveryResponse.statusText}`);
+            throw new Error(
+                `SMART discovery failed: ${discoveryResponse.status} ${discoveryResponse.statusText} ` +
+                `(${wellKnownUrlString}). This organization's endpoint may not be available.`
+            );
         }
 
         const smartConfig = await discoveryResponse.json();

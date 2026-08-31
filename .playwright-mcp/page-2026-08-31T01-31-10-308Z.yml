@@ -1,0 +1,31 @@
+- generic [active] [ref=f6e1]:
+  - generic [ref=f6e2]:
+    - heading "Connect to your record" [level=1] [ref=f6e3]
+    - generic [ref=f6e4]:
+      - searchbox "Search by name, provider, city, state, zip..." [ref=f6e8]
+      - generic [ref=f6e10]:
+        - generic [ref=f6e11] [cursor=pointer]:
+          - heading "Epic FHIR Sandbox" [level=3] [ref=f6e12]
+          - paragraph [ref=f6e13]: "Data Provider: Epic FHIR Sandbox"
+        - generic [ref=f6e14] [cursor=pointer]:
+          - heading "Unreachable Test Endpoint" [level=3] [ref=f6e15]
+          - paragraph [ref=f6e16]: "Data Provider: Unreachable Test Endpoint"
+  - generic [ref=f6e18]:
+    - heading "Connect to Unreachable Test Endpoint?" [level=2] [ref=f6e19]
+    - generic [ref=f6e20]:
+      - paragraph [ref=f6e21]:
+        - strong [ref=f6e22]: "Display Name:"
+        - text: Unreachable Test Endpoint
+      - paragraph [ref=f6e23]:
+        - strong [ref=f6e24]: "Data Provider:"
+        - text: Unreachable Test Endpoint
+      - paragraph [ref=f6e25]:
+        - strong [ref=f6e26]: "Endpoints:"
+      - list [ref=f6e27]:
+        - listitem [ref=f6e28]: https://mcc.api.mayo.edu/epic-fhir/api/FHIR/R4/ (Decommissioned host)
+      - paragraph [ref=f6e29]:
+        - emphasis [ref=f6e30]: "Login Info:"
+        - text: Epic sandbox test patient - username 'fhircamila', password 'epicepic1'
+    - generic [ref=f6e31]:
+      - button "Cancel" [ref=f6e32] [cursor=pointer]
+      - button "Connect" [ref=f6e33] [cursor=pointer]

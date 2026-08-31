@@ -12430,6 +12430,33 @@ function makeAbsoluteUrl(urlStr) {
     return urlStr;
   }
 }
+async function fetchWithRetry(url, init = {}, attempts = 3) {
+  let lastFailure = "";
+  for (let attempt = 0;attempt < attempts; attempt++) {
+    if (attempt > 0) {
+      const delayMs = 400 * Math.pow(3, attempt - 1);
+      updateStatus(`Connection problem; retrying (${attempt + 1} of ${attempts})...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    try {
+      const response = await fetch(url, init);
+      if (response.status >= 500 && attempt < attempts - 1) {
+        lastFailure = `${response.status} ${response.statusText}`;
+        console.warn(`[fetchWithRetry] ${lastFailure} from ${url}; retrying.`);
+        continue;
+      }
+      return response;
+    } catch (err) {
+      lastFailure = err?.message || String(err);
+      console.warn(`[fetchWithRetry] Network failure for ${url}: ${lastFailure}`);
+    }
+  }
+  let host = url;
+  try {
+    host = new URL(url).host;
+  } catch {}
+  throw new Error(`Could not reach ${host}. The server may be temporarily unavailable, or this ` + `organization's directory entry may be out of date.` + (lastFailure ? ` (${lastFailure})` : ""));
+}
 function generateRandomString(length = 40) {
   const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
   let result = "";
@@ -12685,11 +12712,11 @@ async function initiateSmartAuth(fhirBaseUrl, vendorAuthConfig, vendorLabel = "v
     const fhirBaseUrlWithSlash = fhirBaseUrl.endsWith("/") ? fhirBaseUrl : fhirBaseUrl + "/";
     const wellKnownUrlString = fhirBaseUrlWithSlash + ".well-known/smart-configuration";
     console.log(`[initiateSmartAuth] Attempting SMART discovery at: ${wellKnownUrlString}`);
-    const discoveryResponse = await fetch(wellKnownUrlString, {
+    const discoveryResponse = await fetchWithRetry(wellKnownUrlString, {
       headers: { Accept: "application/json" }
     });
     if (!discoveryResponse.ok) {
-      throw new Error(`SMART discovery failed: ${discoveryResponse.status} ${discoveryResponse.statusText}`);
+      throw new Error(`SMART discovery failed: ${discoveryResponse.status} ${discoveryResponse.statusText} ` + `(${wellKnownUrlString}). This organization's endpoint may not be available.`);
     }
     const smartConfig = await discoveryResponse.json();
     const authorizationEndpoint = smartConfig.authorization_endpoint;
