@@ -1,7 +1,0 @@
-- generic [active] [ref=f1e1]:
-  - img "Epic company logo" [ref=f1e4]
-  - generic [ref=f1e5]:
-    - heading "OAuth2 Error" [level=1] [ref=f1e6]
-    - paragraph [ref=f1e7]: Something went wrong trying to authorize the client. Please try logging in again.
-    - contentinfo [ref=f1e8]:
-      - generic [ref=f1e9]: © 2003-2026 Epic Systems Corporation

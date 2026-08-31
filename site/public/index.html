@@ -28,9 +28,33 @@
   /* The gate is enforced with the disabled attribute; these only reflect it. */
   #connect-btn[disabled] { opacity: .45; cursor: not-allowed; }
   #consent[disabled] { cursor: not-allowed; }
+  /* Wide content scrolls inside its own container; the page body never does. */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
   @media (max-width: 900px) {
+    /* The sticky table-of-contents rail has no room; the page grid becomes one column. */
     .toc-rail-wrap { display: none; }
-    [style*="grid-template-columns:212px"] { display: block !important; }
+    .page-grid { display: block !important; }
+    /* The hero is headline + warning callout side by side. Below this width both
+       columns are too narrow to read - the headline broke to one word per line -
+       so they stack, keeping the warning directly beneath the headline. */
+    .hero-grid { display: block !important; }
+    .hero-grid > * + * { margin-top: 32px; }
+  }
+
+  @media (max-width: 640px) {
+    /* Tightening padding and type lets all three columns fit at 390px, so the
+       Source links stay visible. Scrolling the container would have worked but
+       would have parked the links off-screen behind a swipe most people miss.
+       .table-scroll remains as the backstop for narrower viewports. */
+    .ref-table { min-width: 0; }
+    .ref-table th, .ref-table td { padding: 10px 8px !important; font-size: 12px !important; }
+    .ref-table th:last-child, .ref-table td:last-child { word-break: break-word; }
+  }
+
+  @media (max-width: 520px) {
+    /* Keep long headline words from overflowing at the narrowest sizes. */
+    h1 { font-size: 40px !important; line-height: 1.08 !important; }
   }
 </style>
 </head>
@@ -78,7 +102,7 @@
   </header>
 
   <section aria-labelledby="page-title" style="padding:88px 40px 72px; border-bottom:1px solid #ccd7e3; background:#f7f9fc;">
-    <div style="max-width:1180px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,0.85fr); gap:64px; align-items:start;">
+    <div class="hero-grid" style="max-width:1180px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,0.85fr); gap:64px; align-items:start;">
       <div>
         <p style="margin:0 0 22px; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#4a5c70;">21st Century Cures Act · SMART on FHIR</p>
         <h1 id="page-title" style="margin:0 0 26px; font-family:'Source Serif 4',Georgia,serif; font-weight:400; font-size:60px; line-height:1.06; letter-spacing:-0.02em; color:#0d1b2a; max-width:16em;">Get a copy of your own medical record</h1>
@@ -97,7 +121,7 @@
     </div>
   </section>
 
-  <div class="page-grid" style="max-width:1180px; margin:0 auto; padding:0 40px; display:grid; grid-template-columns:212px minmax(0,1fr); gap:64px; align-items:start;">
+  <div class="page-grid" class="page-grid" style="max-width:1180px; margin:0 auto; padding:0 40px; display:grid; grid-template-columns:212px minmax(0,1fr); gap:64px; align-items:start;">
 
     <div class="toc-rail-wrap" style="position:sticky; top:112px; padding:56px 0 40px;">
       
@@ -271,7 +295,7 @@
       <section id="references" aria-labelledby="ref-h" style="scroll-margin-top:96px; padding:0 0 72px;">
         <h2 id="ref-h" style="margin:0 0 24px; font-family:'Source Serif 4',Georgia,serif; font-weight:400; font-size:30px; line-height:1.2; color:#0d1b2a;">References</h2>
         <div class="fc-border" style="border:1px solid #ccd7e3; border-radius:4px; overflow:hidden; background:#fbfcfe;">
-          <table style="width:100%; border-collapse:collapse; text-align:left;">
+          <div class="table-scroll"><table class="ref-table" style="width:100%; border-collapse:collapse; text-align:left;">
             <caption style="padding:14px 20px; text-align:left; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.06em; color:#33465b; background:#e7eef6;">Statutes, rules, and guidance this tool relies on. Links open the official source.</caption>
             <thead>
               <tr style="background:#e7eef6;">
@@ -322,7 +346,7 @@
                 <td style="padding:14px 20px; border-top:1px solid #d9e2ec; font-size:15px;"><a href="https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-318" style="overflow-wrap:anywhere;">ecfr.gov</a></td>
               </tr>
             </tbody>
-          </table>
+          </table></div>
         </div>
       </section>
 
