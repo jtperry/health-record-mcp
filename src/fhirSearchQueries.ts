@@ -40,8 +40,12 @@ const BASE_SEARCH_QUERIES: Readonly<Omit<FhirSearchQuery, 'params'> & { params?:
     { resourceType: 'Specimen', params: {} },
     { resourceType: 'ServiceRequest', params: {} },
     { resourceType: 'Patient', params: {} },
-    { resourceType: 'Practitioner', params: {} },
-    { resourceType: 'Organization', params: {} },
+    // Practitioner and Organization are deliberately absent. Neither defines a `patient`
+    // search parameter in FHIR R4, so a patient-scoped search of them is malformed on its
+    // face. Dropping the `patient` scope instead is not an option: that would ask the server
+    // for its entire practitioner and organization directory. Both types arrive through
+    // reference-following from the resources that cite them, and their counts were unchanged
+    // when these queries were removed.
 ];
 
 /**

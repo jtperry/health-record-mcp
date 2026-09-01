@@ -180,6 +180,24 @@ function resolveReferenceUrl(reference: string, baseUrl: string): string | null 
     }
 }
 
+/**
+ * Is this fetch failure an expected consequence of crawling, rather than a defect?
+ *
+ * 403 means the granted scope does not cover the resource. A 400 naming an unknown parameter
+ * or an invalid id means the server will not serve that reference — Epic's sandbox has
+ * Procedure references whose targets it rejects by id, while other ids of identical shape
+ * resolve fine, so this is server-side data rather than a malformed request on our side.
+ */
+function isExpectedFetchFailure(error: unknown): boolean {
+    const status = (error as { status?: number })?.status;
+    if (status === 403) return true;
+    if (status === 400) {
+        const message = (error as Error)?.message || '';
+        return /Unknown parameter|Invalid FHIR ID/i.test(message);
+    }
+    return false;
+}
+
 // --- Resource and Attachment Processing --- 
 
 // Extracts new fetch tasks (references, attachments) from a single FHIR resource
@@ -601,7 +619,9 @@ export async function fetchAllEhrDataClientSideParallel(
                 let errorMsg = `HTTP ${response.status} for ${task.url}`;
                 if (isJson && resultData?.issue?.[0]?.diagnostics) { errorMsg += `: ${resultData.issue[0].diagnostics}`; }
                 else if (typeof resultData === 'string') { errorMsg += `: ${resultData.substring(0, 100)}`; }
-                throw new Error(errorMsg);
+                const httpError = new Error(errorMsg) as Error & { status?: number };
+                httpError.status = response.status;
+                throw httpError;
             }
 
             // --- Process Success Result ---
@@ -636,8 +656,15 @@ export async function fetchAllEhrDataClientSideParallel(
             taskCompletedSuccessfully = true; // Mark as success for progress message
 
         } catch (error) {
-            // Log fetch/processing error (already includes URL from error message usually)
-            console.error(`Error processing task "${task.description}":`, error);
+            // A crawl that follows every reference will inevitably ask for things the granted
+            // scope does not cover, and servers hold data they will not serve by id. Those are
+            // routine outcomes of walking the graph, not faults, and reporting them as errors
+            // buried the one defect in this run that was actually ours.
+            if (isExpectedFetchFailure(error)) {
+                console.warn(`Skipped "${task.description}": ${(error as Error).message}`);
+            } else {
+                console.error(`Error processing task "${task.description}":`, error);
+            }
         } finally {
             // This task is complete (either success or failure)
             completedFetches++;
@@ -651,6 +678,11 @@ export async function fetchAllEhrDataClientSideParallel(
 
     // --- Initialize Task List ---
     let currentTasks: FetchTask[] = [];
+    // Brand endpoints are published with a trailing slash more often than not, so joining
+    // with an unconditional "/" yields ".../R4//Observation". Epic tolerates the doubled
+    // slash on most paths but rejects it on some, which made this look like an intermittent
+    // server fault rather than a URL bug.
+    const fhirBaseUrlWithSlash = fhirBaseUrl.endsWith('/') ? fhirBaseUrl : `${fhirBaseUrl}/`;
     // Use the shared query generator
     const initialQueries = getInitialFhirSearchQueries(patientId);
 
@@ -659,7 +691,7 @@ export async function fetchAllEhrDataClientSideParallel(
         const params = new URLSearchParams(query.params as Record<string, string>);
         // Consider adding a default _count=500 here or handle pagination later
         // params.set('_count', '500'); 
-        const url = `${fhirBaseUrl}/${query.resourceType}?${params.toString()}`;
+        const url = `${fhirBaseUrlWithSlash}${query.resourceType}?${params.toString()}`;
         const normalizedUrl = url.replace(/\/$/, ''); // Normalize slightly for deduping
         if (!fetchedUrls.has(normalizedUrl)) {
             fetchedUrls.add(normalizedUrl);
@@ -674,7 +706,7 @@ export async function fetchAllEhrDataClientSideParallel(
     });
     
     // Add direct patient fetch task (still useful to ensure patient resource is fetched)
-    const patientUrl = `${fhirBaseUrl}/Patient/${patientId}`;
+    const patientUrl = `${fhirBaseUrlWithSlash}Patient/${patientId}`;
     const normalizedPatientUrl = patientUrl.replace(/\/$/, '');
     if (!fetchedUrls.has(normalizedPatientUrl)) {
         fetchedUrls.add(normalizedPatientUrl);

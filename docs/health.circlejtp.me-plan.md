@@ -612,6 +612,79 @@ There is no notification when it activates, and the error page is byte-identical
 so `scripts/check-epic-sandbox.sh` polls the authorize endpoint and exits 0 once Epic stops
 serving the error page.
 
+### 7.3 Client activated (2026-09-01)
+
+`scripts/check-epic-sandbox.sh` went green at 11:16 local, **roughly 41 hours** after the
+first failed sandbox test recorded in §7.2 (the registration was saved some time before that,
+so this is a lower bound). Either way it is well outside Epic's "allow an hour" guidance and
+at the long end of the 12-hours-to-two-days range other developers report. Nothing about the
+request was changed in between; the wait was the whole fix.
+
+The authorize endpoint now serves `<title>MyChart - Login Page</title>` where it previously
+served the OAuth2 error. The same bogus all-zeros client id used in the §7.2 diagnosis still
+returns `OAuth2 Error`, which is what makes this a real signal rather than a change in Epic's
+behaviour for everyone:
+
+| Client id | Response |
+|---|---|
+| `8d804225-…` (ours) | MyChart login page |
+| all-zeros control | `OAuth2 Error` |
+
+**What this does and does not prove.** It proves the client id resolves and Epic will render a
+login. It does **not** validate the scopes, `redirect_uri`, or `aud` — those are rejected
+*after* login, and the error page was masking every one of them equally. Step 4 of the build
+order is still genuinely untested until a full round trip lands a record.
+
+### 7.4 Full round trip verified (2026-09-01)
+
+Completed against the sandbox test patient. **Step 4 is done: a record came out.**
+
+`ehr-data.json`, 827 KB, **325 resources** for Camila Maria Lopez (`erXuFYUfucBZaryVksYEcMg3`):
+
+| Count | Resource |
+|---|---|
+| 256 | Observation |
+| 13 | Condition |
+| 12 | Goal |
+| 11 | Practitioner |
+| 5 | Encounter / Location |
+| 4 | DocumentReference / DiagnosticReport / ServiceRequest |
+| 3 | Organization |
+| 1 each | Patient, AllergyIntolerance, Immunization, MedicationRequest, Procedure, CareTeam, Specimen, Medication |
+
+Attachment fetching works end to end: 5 attachments with both `contentPlaintext` and
+`contentBase64` populated, including binary fetches through `Binary/…` references and an RTF
+document. SMART discovery succeeded on the first attempt this time — the 503 in §7.2 was
+intermittent, as suspected.
+
+**The unconstrained-FHIR-ID setting was the right call.** Real ids in this pull run to 45
+characters (`eeIUePPFhkOlGgtsbPko4a4tPlKY9045CYysh7Ryulnc3`); the 64-char truncation the
+alternative scheme applies would be a live hazard, not a theoretical one.
+
+#### Defects this surfaced
+
+70 console errors. Grouped, they are three distinct problems, only the first of which is ours:
+
+1. **Double-slash URL construction.** `clientFhirUtils.ts:662` builds
+   `${fhirBaseUrl}/${resourceType}?…` and :677 does the same for Patient, but the brand
+   endpoint already ends in `/`, so every request goes to `…/api/FHIR/R4//Observation`. Epic
+   tolerates it for most paths — the bulk of the pull succeeded — so this is latent rather
+   than fatal, but `src/utils.ts` already has `resolveFhirUrl()` that normalises correctly and
+   these two call sites should use it.
+
+2. **Searches Epic rejects as malformed.** `Practitioner`, `Organization`, `Specimen`,
+   `CarePlan`, and `Observation?category=mental-health` all return
+   `400 Unknown parameter: PATIENT`. *Initially misdiagnosed as these types not supporting a
+   `patient` search parameter — see §7.5, where fixing the doubled slash made most of them
+   succeed.*
+
+3. **403s on reference-following.** 22 `Observation` reads plus `Encounter`, `ServiceRequest`
+   and `Specimen` reads return 403. The crawler follows references into resources the granted
+   scope does not cover. Expected behaviour, but it should be logged as a skip rather than an
+   error.
+
+One `400 Invalid FHIR ID provided` on a `Procedure` read is unexplained and worth a look.
+
 **Also observed:** SMART discovery returned `503 Service Unavailable` on the first attempt and
 succeeded on the next, with the endpoint returning 200 on five consecutive probes from outside
 the browser. Epic's sandbox discovery is intermittently flaky; a retry with backoff around
@@ -626,7 +699,7 @@ discovery would turn a dead end into a hiccup.
 | 1 | Domain / DNS for `health.circlejtp.me` | **done** — custom domain on the Worker |
 | 2 | Ship the landing page (warning + consent gate are v1, not a follow-up) | **done** — live |
 | 3 | Brand refresh job; publish `epic.json` to R2 | **done** — seeded, weekly cron `0 6 * * SUN` |
-| 4 | Wire the retriever build to the brand file; verify a real connect end to end | not started |
+| 4 | Wire the retriever build to the brand file; verify a real connect end to end | **done** — 325 resources + 5 attachments retrieved from the sandbox 2026-09-01 (§7.4) |
 | 5 | Legal review (§11) — a gate, not a formality, given §9.1 | **outstanding** |
 | 6 | Submit the Epic app registration with the live documentation URL | ready to submit |
 
@@ -733,3 +806,35 @@ Three things surfaced that this plan responds to:
    provenance column. Fixed by `--source`.
 3. **The bundled brand directory was 17 months stale**, pointing at a decommissioned Mayo
    Clinic endpoint, and failed with an unhelpful error. §5 exists so this cannot recur here.
+
+### 7.5 Fixes verified against the sandbox (2026-09-01)
+
+All three §7.4 defects fixed and re-run end to end. Worker version `1177e508`.
+
+| | Before | After |
+|---|---|---|
+| Console errors | 70 | 25 |
+| Application-level errors | 45 | **0** |
+| Resources | 325 | 326 |
+| Attachments with content | 5/5 | 5/5 |
+
+Every remaining error is Chrome's own network-layer `Failed to load resource` line, emitted by
+the browser rather than by our code, and each is paired 1:1 with a `Skipped …` warning from
+the retriever. Nothing in the run now reports a fault we could act on.
+
+**The URL bug was causing the search failures.** This corrects §7.4's second finding. With the
+doubled slash removed, `CarePlan`, `Specimen` and `Observation?category=mental-health` all
+stopped returning `400 Unknown parameter: PATIENT` and now succeed — the +1 resource is a
+mental-health Observation that had been silently missing from every prior pull. Epic was not
+rejecting the `patient` parameter; it was mis-parsing `…/R4//CarePlan?patient=…`, and the
+diagnostic it returned pointed at the wrong half of the request.
+
+**Practitioner and Organization stay out of the initial searches regardless.** Neither defines
+a `patient` search parameter in FHIR R4, so that query is malformed independently of the slash,
+and searching them unscoped would pull the server's entire directory. Their counts are
+unchanged at 11 and 3 — reference-following already covers them, as it always did.
+
+The one genuinely unfixable case is the `Procedure` 400. Its id is 66 characters, but so is the
+id of the Procedure that retrieves successfully, and 261 resources in this pull carry ids up to
+88 characters. It is Epic sandbox data, not a length limit and not a request we build wrong, so
+it is classified as a skip.

@@ -6167,9 +6167,7 @@ var BASE_SEARCH_QUERIES = [
   { resourceType: "RelatedPerson", params: {} },
   { resourceType: "Specimen", params: {} },
   { resourceType: "ServiceRequest", params: {} },
-  { resourceType: "Patient", params: {} },
-  { resourceType: "Practitioner", params: {} },
-  { resourceType: "Organization", params: {} }
+  { resourceType: "Patient", params: {} }
 ];
 function getInitialFhirSearchQueries(patientId) {
   return BASE_SEARCH_QUERIES.map((baseQuery) => ({
@@ -11900,6 +11898,16 @@ function resolveReferenceUrl(reference, baseUrl) {
     return null;
   }
 }
+function isExpectedFetchFailure(error) {
+  const status = error?.status;
+  if (status === 403)
+    return true;
+  if (status === 400) {
+    const message = error?.message || "";
+    return /Unknown parameter|Invalid FHIR ID/i.test(message);
+  }
+  return false;
+}
 function extractTasksFromResource(resource, fhirBaseUrl, currentDepth) {
   const newTasks = [];
   if (!resource || typeof resource !== "object" || !resource.resourceType || !resource.id)
@@ -12235,7 +12243,9 @@ async function fetchAllEhrDataClientSideParallel(accessToken, fhirBaseUrl, patie
         } else if (typeof resultData === "string") {
           errorMsg += `: ${resultData.substring(0, 100)}`;
         }
-        throw new Error(errorMsg);
+        const httpError = new Error(errorMsg);
+        httpError.status = response.status;
+        throw httpError;
       }
       if (isJson && resultData?.resourceType === "Bundle" && resultData.entry) {
         const entries = resultData.entry;
@@ -12267,7 +12277,11 @@ async function fetchAllEhrDataClientSideParallel(accessToken, fhirBaseUrl, patie
       }
       taskCompletedSuccessfully = true;
     } catch (error) {
-      console.error(`Error processing task "${task.description}":`, error);
+      if (isExpectedFetchFailure(error)) {
+        console.warn(`Skipped "${task.description}": ${error.message}`);
+      } else {
+        console.error(`Error processing task "${task.description}":`, error);
+      }
     } finally {
       completedFetches++;
       const statusMsg = taskCompletedSuccessfully ? `Completed: ${task.description}` : `Failed: ${task.description}`;
@@ -12277,10 +12291,11 @@ async function fetchAllEhrDataClientSideParallel(accessToken, fhirBaseUrl, patie
     return discoveredTasks;
   }
   let currentTasks = [];
+  const fhirBaseUrlWithSlash = fhirBaseUrl.endsWith("/") ? fhirBaseUrl : `${fhirBaseUrl}/`;
   const initialQueries = getInitialFhirSearchQueries(patientId);
   initialQueries.forEach((query) => {
     const params = new URLSearchParams(query.params);
-    const url = `${fhirBaseUrl}/${query.resourceType}?${params.toString()}`;
+    const url = `${fhirBaseUrlWithSlash}${query.resourceType}?${params.toString()}`;
     const normalizedUrl = url.replace(/\/$/, "");
     if (!fetchedUrls.has(normalizedUrl)) {
       fetchedUrls.add(normalizedUrl);
@@ -12289,7 +12304,7 @@ async function fetchAllEhrDataClientSideParallel(accessToken, fhirBaseUrl, patie
       currentTasks.push({ url, description, depth: 0 });
     }
   });
-  const patientUrl = `${fhirBaseUrl}/Patient/${patientId}`;
+  const patientUrl = `${fhirBaseUrlWithSlash}Patient/${patientId}`;
   const normalizedPatientUrl = patientUrl.replace(/\/$/, "");
   if (!fetchedUrls.has(normalizedPatientUrl)) {
     fetchedUrls.add(normalizedPatientUrl);
