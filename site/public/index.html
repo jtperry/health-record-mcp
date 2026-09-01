@@ -268,7 +268,7 @@
           <p role="status" style="margin:0 0 24px; padding:14px 18px; background:#e7eef6; border:1px solid #9fb8d0; border-radius:3px; font-size:15.5px; line-height:1.6; color:#10283f;">Read the warning section above, then confirm you have read it. The consent statement and connect button unlock after that.</p>
 
           <div style="display:grid; grid-template-columns:26px minmax(0,1fr); gap:16px; align-items:start; padding-bottom:26px; border-bottom:1px solid #d9e2ec;">
-            <input id="consent" type="checkbox" disabled aria-describedby="consent-text" style="width:22px; height:22px; margin:3px 0 0; accent-color:#0b4f8a; cursor:pointer;" />
+            <input id="consent" type="checkbox" disabled aria-describedby="consent-text" style="width:24px; height:24px; margin:3px 0 0; accent-color:#0b4f8a; cursor:pointer;" />
             <label id="consent-text" for="consent" style="font-size:16.5px; line-height:1.65; color:#223549; cursor:pointer;">I have read the warning above. I understand that a copy of my medical record will be stored on this device, that HIPAA protections do not extend to that copy, and that I am solely responsible for its security. I accept the <a href="https://health.circlejtp.me/terms">Terms and Conditions</a>, and that the operator of this site bears no responsibility or liability for it.</label>
           </div>
 
@@ -435,13 +435,22 @@
 
   // Table-of-contents highlighting.
   var toc = document.querySelectorAll('[data-toc]');
-  if (toc.length && 'IntersectionObserver' in window) {
+  if (toc.length) {
     var ids = ['law','warning','architecture','steps','connect','disclaimer','references'];
-    var spy = new IntersectionObserver(function (entries) {
-      var vis = entries.filter(function (e) { return e.isIntersecting; })
-        .sort(function (a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
-      if (!vis.length) return;
-      var active = vis[0].target.id;
+    // Choose by position rather than by intersection order. Sorting intersecting
+    // entries by top picks the section just scrolled *past* - its top is the most
+    // negative - so the rail lagged one entry behind the heading on screen.
+    function refreshSpy() {
+      var active = ids[0];
+      for (var i = 0; i < ids.length; i++) {
+        var el = document.getElementById(ids[i]);
+        if (el && el.getBoundingClientRect().top <= 120) active = ids[i];
+      }
+      // At the foot of the document the final sections can never reach the top, so
+      // without this the last entry is never markable however far you scroll.
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+        active = ids[ids.length - 1];
+      }
       toc.forEach(function (a) {
         var on = a.dataset.toc === active;
         var isWarning = a.dataset.toc === 'warning';
@@ -450,8 +459,19 @@
         a.style.fontWeight = (on || isWarning) ? '700' : '400';
         if (on) { a.setAttribute('aria-current', 'true'); } else { a.removeAttribute('aria-current'); }
       });
-    }, { rootMargin: '-100px 0px -60% 0px' });
-    ids.forEach(function (id) { var el = document.getElementById(id); if (el) spy.observe(el); });
+    }
+    // Scroll-driven, not IntersectionObserver: with scroll-behavior: smooth the
+    // observer's last callback lands mid-animation, so the resting position was
+    // never evaluated and clicking a rail link could leave the wrong entry marked.
+    var spyQueued = false;
+    function onSpyScroll() {
+      if (spyQueued) return;
+      spyQueued = true;
+      window.requestAnimationFrame(function () { spyQueued = false; refreshSpy(); });
+    }
+    window.addEventListener('scroll', onSpyScroll, { passive: true });
+    window.addEventListener('resize', onSpyScroll, { passive: true });
+    refreshSpy();
   }
 
   paint();

@@ -474,104 +474,27 @@ async function main() {
     }
 
     if (options.createDb) {
-        // --- Create DB Mode ---
-        console.error('[CLI] Running in --create-db mode.');
+        // --create-db drove the browser flow through the retriever's delivery mechanism:
+        // it opened /ehretriever.html#deliver-to:cli-callback and waited for a POST to
+        // /ehr-data. Both were removed from the retriever (see
+        // docs/health.circlejtp.me-plan.md 9.4) because the delivery path let any origin
+        // named in the URL hash receive a complete medical record. Nothing here can put
+        // that back without reinstating the mechanism.
+        //
+        // --import-json covers the same ground in two steps rather than one, and is what
+        // this project actually uses.
+        console.error('[CLI] --create-db is no longer available.');
+        console.error('');
+        console.error('  It relied on the retriever delivering the record back to this');
+        console.error('  process, which was removed for security reasons.');
+        console.error('');
+        console.error('  Use the two-step flow instead:');
+        console.error('    1. Download your record from the web retriever.');
+        console.error('    2. bun run src/cli.ts --import-json <file> --db <db> --source <name>');
+        console.error('');
+        process.exit(1);
+    }
 
-        // --- Load Configuration ---
-        const configPath = path.resolve(options.config);
-        let appConfig: AppConfig;
-        try {
-             console.log(`[CLI] Loading configuration from: ${configPath}`);
-             appConfig = await loadConfig(configPath);
-             // Basic validation of server config needed for this mode
-             if (!appConfig.server || typeof appConfig.server.port !== 'number' || !appConfig.server.host) {
-                 throw new Error("Server 'host' and 'port' must be defined in the config file.");
-             }
-             if (appConfig.server.https.enabled && (!appConfig.server.https.keyPath || !appConfig.server.https.certPath)) {
-                 throw new Error("HTTPS is enabled in config, but 'keyPath' or 'certPath' is missing.");
-             }
-             console.log(`[CLI] Configuration loaded successfully. Server Base URL: ${appConfig.server.baseUrl}`);
-        } catch (configError: any) {
-             console.error(`[CLI] FATAL ERROR loading or validating configuration from "${configPath}": ${configError.message}`);
-             process.exit(1);
-        }
-        // --- End Load Configuration ---
-
-        // const port = parseInt(options.port, 10); // Port now comes from config
-        // if (isNaN(port)) {
-        //     console.error('[CLI] Error: Invalid port number provided.');
-        //     process.exit(1);
-        // }
-
-        // --- Upfront check for existing DB file ---
-        await resolveExistingDb(dbPath, options);
-        await backfillSource(dbPath, options);
-        // --- End upfront check ---
-
-        // --- Dynamically build ehretriever.ts for CLI mode ---
-
-        // Define the specific endpoint needed for CLI mode, using the loaded config base URL
-        const cliPostUrl = new URL('/ehr-data', appConfig.server.baseUrl).toString();
-        console.error(`[CLI] Configuring retriever to POST data to: ${cliPostUrl}`);
-        const cliDeliveryEndpoint = {
-            "cli-callback": { postUrl: cliPostUrl } // Use the fully qualified URL
-        };
-
-        // Prepare arguments for the build script
-        const buildScriptPath = path.resolve(__dirname, '..', 'scripts', 'build-ehretriever.ts');
-        const buildScriptArgs = [
-            buildScriptPath,
-            // Pass the CLI-specific endpoint as a JSON string
-            '--extra-endpoints', JSON.stringify(cliDeliveryEndpoint)
-            // Pass the original config file path to the build script as well
-            // so it can read retrieverConfig, vendorConfig etc.
-        ];
-        // Always pass the config path used by the CLI to the build script
-        console.error(`[CLI] Using config file for retriever build: ${configPath}`);
-        buildScriptArgs.push('--config', configPath);
-        
-        // If a base config file is provided via CLI args, pass it to the build script
-        // This logic is now handled by always passing options.config
-        // if (options.config) {
-        //     const configPath = path.resolve(options.config);
-        //     console.error(`[CLI] Using config file for retriever build: ${configPath}`);
-        //     buildScriptArgs.push('--config', configPath);
-        // }
-
-        // Execute the build script
-        console.error(`[CLI] Running build script: bun ${buildScriptArgs.join(' ')}`);
-        const buildProc = spawn(['bun', ...buildScriptArgs], {
-            stdio: ['ignore', 'pipe', 'pipe'], // Capture stdout/stderr
-            // cwd: process.cwd(), // Optional: ensure correct working directory if needed
-        });
-
-        // Capture and log output in real-time (or after exit)
-        let buildStdout = '';
-        let buildStderr = '';
-        buildProc.stdout.pipeTo(new WritableStream({ write(chunk) { buildStdout += chunk; console.error('[Build stdout]:', new TextDecoder().decode(chunk).trim()); } }));
-        buildProc.stderr.pipeTo(new WritableStream({ write(chunk) { buildStderr += chunk; console.error('[Build stderr]:', new TextDecoder().decode(chunk).trim()); } }));
-
-        const buildExitCode = await buildProc.exited;
-
-        if (buildExitCode !== 0) {
-            console.error('[CLI] FATAL ERROR: Failed to build ehretriever for --create-db mode.');
-            console.error(`[CLI] Exit Code: ${buildExitCode}`);
-            process.exit(1);
-        }
-        console.error('[CLI] Successfully built ehretriever for CLI mode.');
-        // --- End dynamic build ---
-
-        try {
-            // Pass dbPath and the loaded server configuration
-            await startEhrFetchServer(dbPath, appConfig.server, options.source ?? null);
-            console.error(`[CLI] Successfully created database: ${dbPath}`);
-            process.exit(0);
-        } catch (error: any) {
-            console.error(`[CLI] Failed to create database: ${error.message}`);
-            process.exit(1);
-        }
-
-    } else {
         // --- Stdio Mode (Original Logic) ---
         console.error(`[CLI] Running in stdio mode.`);
         console.error(`[CLI] Using database: ${dbPath}`);
@@ -655,7 +578,6 @@ async function main() {
             }
             process.exit(1);
         }
-    }
 }
 
 // Run the main function

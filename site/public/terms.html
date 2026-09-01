@@ -1,240 +1,388 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" type="image/png" href="/icon.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>Terms and Conditions — Get a copy of your own medical record</title>
-<meta name="description" content="Terms and Conditions for the record retrieval tool at health.circlejtp.me.">
+<title>Terms and Conditions</title>
+<meta name="description" content="Terms for health.circlejtp.me, a browser-only tool for downloading a copy of your own medical record.">
+<link rel="icon" href="/icon.png">
+<link rel="stylesheet" href="/fonts/fonts.css">
 <style>
   :root {
-    --bg: #fbfaf8; --surface: #ffffff; --text: #1b1b1f; --muted: #5b5b66;
-    --line: #e3e1dd; --accent: #1c5d99; --accent-ink: #ffffff;
-    --warn-bg: #fff8f2; --warn-line: #c2410c; --warn-ink: #7c2d12;
-    --ok: #146c43;
-    --measure: 42rem;
-  }
-  :root:not([data-theme="light"]) { }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #14141a; --surface: #1c1c24; --text: #eceaf0; --muted: #a2a0ad;
-      --line: #32323e; --accent: #7fb3e0; --accent-ink: #10131a;
-      --warn-bg: #2a1710; --warn-line: #f97316; --warn-ink: #fdba74;
-      --ok: #6ee7a8;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #14141a; --surface: #1c1c24; --text: #eceaf0; --muted: #a2a0ad;
-    --line: #32323e; --accent: #7fb3e0; --accent-ink: #10131a;
-    --warn-bg: #2a1710; --warn-line: #f97316; --warn-ink: #fdba74;
-    --ok: #6ee7a8;
+    --paper:   #eef2f7;
+    --band:    #f7f9fc;
+    --surface: #fbfcfe;
+    --callout: #e7eef6;
+    --ink:     #0d1b2a;
+    --body:    #223549;
+    --muted:   #33465b;
+    --faint:   #3f5265;
+    --dim:     #4a5c70;
+    --line:    #ccd7e3;
+    --hair:    #d9e2ec;
+    --accent:  #0b4f8a;
+    --accent-dark: #073a68;
+    --navy:    #17324d;
+    --navy-ink:#10283f;
+    --pale:    #cfe0f0;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Public Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
   }
 
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 400 17px/1.65 ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); }
+  h1, h2, h3 { text-wrap: balance; }
+  p, li { text-wrap: pretty; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:hover { color: var(--accent-dark); text-decoration-thickness: 2px; }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+    outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 2px;
   }
-  main { max-width: var(--measure); margin: 0 auto; padding: 3rem 1.25rem 5rem; }
-  h1, h2, h3 { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.2; letter-spacing: -0.015em; }
-  h1 { font-size: clamp(2rem, 5vw, 2.75rem); margin: 0 0 1rem; }
-  h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
-  h3 { font-size: 1.15rem; margin: 2rem 0 .5rem; }
-  p { margin: 0 0 1.1rem; }
-  a { color: var(--accent); }
-  ul { padding-left: 1.2rem; }
-  li { margin: .35rem 0; }
-  .lede { font-size: 1.15rem; color: var(--muted); }
-  .rule { border: 0; border-top: 1px solid var(--line); margin: 3rem 0; }
-  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em;
-         background: color-mix(in srgb, var(--text) 8%, transparent); padding: .1em .35em; border-radius: 4px; }
+  ::selection { background: var(--pale); }
 
-  /* --- The warning: visually dominant, never collapsed --- */
-  .warning {
-    background: var(--warn-bg); border: 2px solid var(--warn-line);
-    border-radius: 10px; padding: 1.75rem 1.5rem; margin: 2.5rem 0;
+  .skip-link { position: absolute; left: -9999px; top: 0; }
+  .skip-link:focus {
+    left: 12px; top: 12px; z-index: 60; padding: 14px 20px;
+    background: var(--accent); color: #fff; font-size: 16px; font-weight: 600;
+    text-decoration: none; border-radius: 3px;
   }
-  .warning h2 { margin-top: 0; color: var(--warn-ink); font-size: 1.6rem; }
-  .warning h3 { color: var(--warn-ink); font-size: 1.2rem; }
-  .warning strong { color: var(--warn-ink); }
-  .warning .headline { font-size: 1.2rem; font-weight: 600; }
-  blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 3px solid var(--warn-line);
-               color: var(--muted); font-style: italic; }
 
-  .consent {
-    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-    padding: 1.5rem; margin: 2rem 0;
+  .pad { padding-left: 40px; padding-right: 40px; }
+
+  /* Smooth scrolling and the sticky rail are both motion; honour the preference. */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
   }
-  .consent label { display: flex; gap: .75rem; align-items: flex-start; cursor: pointer;
-                   font-family: ui-sans-serif, system-ui, sans-serif; font-size: .97rem; }
-  .consent input { margin-top: .3rem; width: 1.15rem; height: 1.15rem; flex: none; }
-  button {
-    margin-top: 1.25rem; width: 100%; padding: .85rem 1rem; font: 600 1.05rem/1 ui-sans-serif, system-ui, sans-serif;
-    color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 8px; cursor: pointer;
+  @media (forced-colors: active) { .fc-border { border: 1px solid CanvasText !important; } }
+
+  header.site {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    padding-top: 14px; padding-bottom: 14px;
+    background: var(--paper); border-bottom: 1px solid var(--line);
   }
-  button[disabled] { opacity: .45; cursor: not-allowed; }
-  .pending { margin-top: 1rem; padding: .85rem 1rem; border: 1px dashed var(--line);
-             border-radius: 8px; color: var(--muted); font-family: ui-sans-serif, system-ui, sans-serif;
-             font-size: .92rem; }
-  .refs { font-size: .93rem; }
-  .refs td { padding: .35rem .75rem .35rem 0; vertical-align: top; border-bottom: 1px solid var(--line); }
-  table { border-collapse: collapse; width: 100%; }
-  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line);
-           color: var(--muted); font-size: .9rem; }
-  .disclaimer { font-size: .93rem; color: var(--muted); }
-</style></head>
+  .brandmark { display: flex; align-items: center; gap: 12px; }
+  .brandmark .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent); }
+  .brandmark .host {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  header.site a.back {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+    font-size: 15px; font-weight: 600;
+  }
+
+  .hero { padding-top: 72px; padding-bottom: 56px; border-bottom: 1px solid var(--line); background: var(--band); }
+  .hero .inner { max-width: 1180px; margin: 0 auto; }
+  .hero .kicker {
+    margin: 0 0 20px; font-family: var(--mono); font-size: 12px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--dim);
+  }
+  h1 {
+    margin: 0 0 22px; font-family: var(--serif); font-weight: 400;
+    font-size: 54px; line-height: 1.06; letter-spacing: -.02em;
+  }
+  .hero .lede { margin: 0 0 18px; max-width: 34em; font-size: 19px; line-height: 1.6; color: var(--body); }
+  .hero .updated { margin: 0; font-family: var(--mono); font-size: 13px; color: var(--faint); }
+
+  .page-grid {
+    max-width: 1180px; margin: 0 auto;
+    display: grid; grid-template-columns: 212px minmax(0,1fr); gap: 64px; align-items: start;
+  }
+
+  .toc-rail-wrap { position: sticky; top: 112px; padding: 56px 0 40px; }
+  .toc-rail-wrap .toc-h {
+    margin: 0 0 18px; font-family: var(--mono); font-size: 11px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--dim);
+  }
+  #toc { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--line); }
+  #toc a {
+    display: block; padding: 9px 0 9px 16px; margin-left: -1px;
+    border-left: 2px solid transparent;
+    font-size: 14.5px; line-height: 1.35; color: var(--muted); text-decoration: none;
+  }
+  #toc a:hover { color: var(--accent); text-decoration: underline; }
+  /* aria-current is the source of truth; the styling follows it rather than a
+     separate class, so the visual state and the announced state cannot drift. */
+  #toc a[aria-current="true"] { border-left-color: var(--accent); color: var(--accent); font-weight: 700; }
+  #toc a[data-key="1"] { color: var(--accent); font-weight: 700; }
+
+  main { padding: 56px 0 0; max-width: 44em; }
+
+  section { scroll-margin-top: 96px; }
+  section + section { padding-top: 52px; }
+  section:not(:last-child) { padding-bottom: 52px; border-bottom: 1px solid var(--line); }
+  section:last-child { padding-bottom: 72px; }
+
+  h2 {
+    margin: 0 0 20px; font-family: var(--serif); font-weight: 400;
+    font-size: 32px; line-height: 1.18; letter-spacing: -.01em;
+  }
+  h2 .num { font-family: var(--mono); font-size: 15px; letter-spacing: .06em; color: var(--dim); margin-right: 14px; }
+  p { margin: 0 0 18px; font-size: 17.5px; line-height: 1.7; color: var(--body); }
+  p:last-child { margin-bottom: 0; }
+  ul.plain { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+  ul.plain li { font-size: 17px; line-height: 1.65; color: var(--body); }
+
+  ol.flow { margin: 0 0 24px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+  ol.flow li {
+    display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 18px;
+    align-items: baseline; padding: 18px 0; border-top: 1px solid var(--hair);
+  }
+  ol.flow li:last-child { border-bottom: 1px solid var(--hair); }
+  ol.flow .num { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+  ol.flow p { margin: 0; font-size: 17px; line-height: 1.65; }
+  .pullquote { margin: 0; font-size: 17px; line-height: 1.7; color: var(--muted); border-left: 3px solid var(--accent); padding-left: 18px; }
+
+  .warning { border: 2px solid var(--navy); border-radius: 4px; overflow: hidden; background: #f4f8fc; }
+  .warning .head {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    padding: 22px 26px; background: var(--navy);
+  }
+  .warning .head .tag {
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--pale);
+  }
+  .warning .head h3 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 25px; line-height: 1.25; color: #fff; }
+  .warning .content { padding: 28px 26px 32px; }
+  .warning .content p { font-size: 17px; color: #22384f; }
+  .warning blockquote {
+    margin: 0 0 22px; padding: 20px 24px; background: var(--callout);
+    border-left: 4px solid var(--navy); border-radius: 0 3px 3px 0;
+    font-family: var(--serif); font-size: 19px; font-style: italic; line-height: 1.55; color: var(--navy-ink);
+  }
+  .warning .closer { margin: 0; font-size: 17.5px; font-weight: 700; line-height: 1.65; color: var(--navy-ink); }
+
+  .cards { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .cards > div { background: var(--surface); padding: 22px 24px; }
+  .cards h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+  .cards p { margin: 0; font-size: 16.5px; line-height: 1.62; }
+
+  footer.site { border-top: 1px solid var(--line); background: var(--callout); padding-top: 40px; padding-bottom: 40px; }
+  footer.site .inner {
+    max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap;
+    gap: 20px; justify-content: space-between; align-items: baseline;
+  }
+  footer.site p { margin: 0; font-size: 15.5px; line-height: 1.6; color: var(--muted); max-width: 44em; }
+  footer.site .who { font-family: var(--mono); font-size: 12.5px; color: var(--faint); }
+
+  @media (max-width: 900px) {
+    .toc-rail-wrap { display: none; }
+    .page-grid { grid-template-columns: minmax(0,1fr); }
+    h1 { font-size: 42px; }
+  }
+  @media (max-width: 720px) {
+    .pad { padding-left: 20px; padding-right: 20px; }
+    h1 { font-size: 34px; }
+    h2 { font-size: 26px; }
+  }
+</style>
+</head>
 <body>
-<main>
+<a class="skip-link" href="#main">Skip to main content</a>
 
-  <p><a href="/">&larr; Back to the main page</a></p>
+<header class="site pad">
+  <div class="brandmark">
+    <span class="dot" aria-hidden="true"></span>
+    <span class="host">health.circlejtp.me</span>
+  </div>
+  <a class="back" href="/">&larr; Back to the main page</a>
+</header>
 
-  <h1>Terms and Conditions</h1>
-  <p class="lede">
-    Please read these terms before authorizing access to your health information.
-  </p>
-  <p><strong>Last updated:</strong> 30 August 2026</p>
+<section class="hero pad" aria-labelledby="page-title">
+  <div class="inner">
+    <p class="kicker">health.circlejtp.me &middot; Legal</p>
+    <h1 id="page-title">Terms and Conditions</h1>
+    <p class="lede">Please read these terms before authorizing access to your health information.</p>
+    <p class="updated">Last updated: 30 August 2026</p>
+  </div>
+</section>
 
-  <h2>1. What this tool is</h2>
-  <p>
-    This tool helps you obtain a copy of your own medical record from your health system and
-    save it to your own device. It is operated by <strong>JT Perry</strong>
-    (<a href="mailto:jt.perry@gmail.com">jt.perry@gmail.com</a>) as an independent individual.
-  </p>
-  <p>
-    It is not affiliated with, endorsed by, or sponsored by Epic Systems Corporation,
-    athenahealth, or any health system. References to those organizations are descriptive only.
-  </p>
+<div class="page-grid pad">
 
-  <h2>2. How your data flows</h2>
-  <p>
-    This is a browser-only application. When you connect:
-  </p>
-  <ul>
-    <li>You authenticate <strong>directly with your health system</strong>, on their own site.
-      Your username and password are never seen by this site.</li>
-    <li>Your browser exchanges the authorization code and requests your record
-      <strong>directly from your health system's servers</strong>.</li>
-    <li>Your record is assembled in your browser and written to your device.</li>
-  </ul>
-  <p>
-    <strong>Your health information is never transmitted to, received by, or stored on any
-    server operated by us.</strong> This is a property of how the software is built, not merely
-    a policy commitment. It also means we cannot retrieve, correct, or delete your record — we
-    never hold a copy.
-  </p>
-
-  <h2>3. The copy you create is your responsibility</h2>
-  <div class="warning">
-    <p class="headline">
-      Once your record is downloaded, HIPAA no longer protects it.
-    </p>
-    <p>
-      HIPAA governs your health system, not you and not this tool. The U.S. Department of
-      Health and Human Services has stated that the HIPAA Rules
-    </p>
-    <blockquote>
-      &ldquo;do not impose any restrictions on how an individual or the individual&rsquo;s
-      designee, such as an app, may use the health information that has been disclosed
-      pursuant to the individual&rsquo;s right of access.&rdquo;
-    </blockquote>
-    <p>
-      <strong>You accept sole and complete responsibility</strong> for the confidentiality,
-      integrity, security, storage, use, and disclosure of the copy you create, and for any
-      consequence of it being exposed — including through a lost or unencrypted device, a
-      cloud-sync folder, malware, another person with access to your computer, or your own
-      sharing of the file with any person or service.
-    </p>
-    <p>
-      Health information cannot be un-disclosed. If you are not prepared to secure this file
-      yourself, do not use this tool.
-    </p>
+  <div class="toc-rail-wrap">
+    <nav aria-labelledby="toc-heading">
+      <p class="toc-h" id="toc-heading">On this page</p>
+      <ol id="toc">
+        <li><a href="#what" data-toc="what">1. What this tool is</a></li>
+        <li><a href="#flow" data-toc="flow">2. How your data flows</a></li>
+        <li><a href="#responsibility" data-toc="responsibility" data-key="1">3. Your responsibility</a></li>
+        <li><a href="#use" data-toc="use">4. Acceptable use</a></li>
+        <li><a href="#warranty" data-toc="warranty">5. No warranty</a></li>
+        <li><a href="#liability" data-toc="liability">6. Limitation of liability</a></li>
+        <li><a href="#rights" data-toc="rights">7. Your rights</a></li>
+        <li><a href="#changes" data-toc="changes">8. Changes to these terms</a></li>
+        <li><a href="#contact" data-toc="contact">9. Contact</a></li>
+      </ol>
+    </nav>
   </div>
 
-  <h2>4. Acceptable use</h2>
-  <p>You agree that you will:</p>
-  <ul>
-    <li>Use this tool only to access records you are legally entitled to access — your own, or
-      those of someone for whom you hold lawful authority such as a parent or legal proxy;</li>
-    <li>Not use it to access another person's record without that authority;</li>
-    <li>Not attempt to disrupt, overload, or circumvent the security of this site or of any
-      health system it connects to.</li>
-  </ul>
+  <main id="main">
 
-  <h2>5. No warranty</h2>
-  <p>
-    This tool is provided <strong>&ldquo;as is&rdquo; and &ldquo;as available&rdquo;, without
-    warranty of any kind</strong>, express or implied, including but not limited to warranties
-    of merchantability, fitness for a particular purpose, accuracy, completeness, title, and
-    non-infringement.
-  </p>
-  <p>
-    <strong>No guarantee of completeness or accuracy.</strong> The data comes from your health
-    system. It may be incomplete, out of date, or incorrect. What is retrieved is not a
-    certified copy of your legal medical record, and records held by providers you do not
-    connect to will not appear. For an official copy, contact your health system's medical
-    records department.
-  </p>
-  <p>
-    <strong>Not medical advice.</strong> This tool retrieves and displays records; it does not
-    interpret them. Nothing here is medical advice. Do not make health decisions based on this
-    data without consulting a qualified clinician.
-  </p>
-  <p>
-    <strong>No guarantee of availability.</strong> This is a personal, non-commercial project.
-    It may change, break, or be discontinued at any time and without notice.
-  </p>
+    <section id="what" aria-labelledby="what-h">
+      <h2 id="what-h"><span class="num" aria-hidden="true">01</span>What this tool is</h2>
+      <p>This tool helps you obtain a copy of your own medical record from your health system and save it to your own device. It is operated by <strong>JT Perry</strong> (<a href="mailto:jt.perry@gmail.com">jt.perry@gmail.com</a>) as an independent individual.</p>
+      <p>It is not affiliated with, endorsed by, or sponsored by Epic Systems Corporation, athenahealth, or any health system. References to those organizations are descriptive only.</p>
+    </section>
 
-  <h2>6. Limitation of liability</h2>
-  <p>
-    To the maximum extent permitted by applicable law, the operator shall not be liable for any
-    direct, indirect, incidental, special, consequential, exemplary, or punitive damages, or
-    for any loss of data, privacy, profits, or goodwill, arising out of or relating to your use
-    of this tool or to the creation, storage, use, disclosure, or loss of any copy of health
-    information created through it — whether based in contract, tort, negligence, strict
-    liability, or otherwise, and whether or not the operator has been advised of the
-    possibility of such damages.
-  </p>
-  <p>
-    Some jurisdictions do not allow the exclusion of certain warranties or the limitation of
-    certain liabilities. Where such a limitation is not permitted, the exclusions above apply
-    to the fullest extent permitted by law, and nothing in these terms limits liability that
-    cannot lawfully be limited.
-  </p>
+    <section id="flow" aria-labelledby="flow-h">
+      <h2 id="flow-h"><span class="num" aria-hidden="true">02</span>How your data flows</h2>
+      <p>This is a browser-only application. When you connect:</p>
+      <ol class="flow">
+        <li>
+          <span class="num" aria-hidden="true">01</span>
+          <p>You authenticate <strong>directly with your health system</strong>, on their own site. Your username and password are never seen by this site.</p>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">02</span>
+          <p>Your browser exchanges the authorization code and requests your record <strong>directly from your health system&rsquo;s servers</strong>.</p>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">03</span>
+          <p>Your record is assembled in your browser and written to your device.</p>
+        </li>
+      </ol>
+      <p class="pullquote"><strong>Your health information is never transmitted to, received by, or stored on any server operated by us.</strong> This is a property of how the software is built, not merely a policy commitment. It also means we cannot retrieve, correct, or delete your record &mdash; we never hold a copy.</p>
+    </section>
 
-  <h2>7. Your rights, and what they are not</h2>
-  <p>
-    Your right to obtain this data comes from federal law — the 21st Century Cures Act
-    (Pub. L. No. 114-255), the HIPAA right of access at 45 CFR &sect; 164.524, and the
-    information-blocking rules at 45 CFR Part 171. This tool merely helps you exercise it.
-  </p>
-  <p>
-    Because no health information is held here, there is nothing for you to request, correct,
-    or delete from us. Requests to access, amend, or restrict your medical record must be made
-    to your health system, which remains the custodian of that record.
-  </p>
+    <section id="responsibility" aria-labelledby="resp-h">
+      <h2 id="resp-h"><span class="num" aria-hidden="true">03</span>The copy you create is your responsibility</h2>
+      <div class="warning fc-border">
+        <div class="head">
+          <span class="tag">Warning</span>
+          <h3>Once your record is downloaded, HIPAA no longer protects it</h3>
+        </div>
+        <div class="content">
+          <p>HIPAA governs your health system, not you and not this tool. The U.S. Department of Health and Human Services has stated that the HIPAA Rules</p>
+          <blockquote cite="https://www.hhs.gov/hipaa/for-professionals/privacy/guidance/access-right-health-apps-apis/index.html">&ldquo;do not impose any restrictions on how an individual or the individual&rsquo;s designee, such as an app, may use the health information that has been disclosed pursuant to the individual&rsquo;s right of access.&rdquo;</blockquote>
+          <p><strong>You accept sole and complete responsibility</strong> for the confidentiality, integrity, security, storage, use, and disclosure of the copy you create, and for any consequence of it being exposed &mdash; including through a lost or unencrypted device, a cloud-sync folder, malware, another person with access to your computer, or your own sharing of the file with any person or service.</p>
+          <p class="closer">Health information cannot be un-disclosed. If you are not prepared to secure this file yourself, do not use this tool.</p>
+        </div>
+      </div>
+    </section>
 
-  <h2>8. Changes to these terms</h2>
-  <p>
-    These terms may be updated. The date at the top reflects the most recent revision.
-    Continued use after a change constitutes acceptance of the revised terms.
-  </p>
+    <section id="use" aria-labelledby="use-h">
+      <h2 id="use-h"><span class="num" aria-hidden="true">04</span>Acceptable use</h2>
+      <p>You agree that you will:</p>
+      <ul class="plain">
+        <li>Use this tool only to access records you are legally entitled to access &mdash; your own, or those of someone for whom you hold lawful authority such as a parent or legal proxy;</li>
+        <li>Not use it to access another person&rsquo;s record without that authority;</li>
+        <li>Not attempt to disrupt, overload, or circumvent the security of this site or of any health system it connects to.</li>
+      </ul>
+    </section>
 
-  <h2>9. Contact</h2>
-  <p>
-    JT Perry &mdash; <a href="mailto:jt.perry@gmail.com">jt.perry@gmail.com</a>
-  </p>
+    <section id="warranty" aria-labelledby="warranty-h">
+      <h2 id="warranty-h"><span class="num" aria-hidden="true">05</span>No warranty</h2>
+      <p>This tool is provided <strong>&ldquo;as is&rdquo; and &ldquo;as available&rdquo;, without warranty of any kind</strong>, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, accuracy, completeness, title, and non-infringement.</p>
+      <div class="cards fc-border">
+        <div>
+          <h3>No guarantee of completeness or accuracy</h3>
+          <p>The data comes from your health system. It may be incomplete, out of date, or incorrect. What is retrieved is not a certified copy of your legal medical record, and records held by providers you do not connect to will not appear. For an official copy, contact your health system&rsquo;s medical records department.</p>
+        </div>
+        <div>
+          <h3>Not medical advice</h3>
+          <p>This tool retrieves and displays records; it does not interpret them. Nothing here is medical advice. Do not make health decisions based on this data without consulting a qualified clinician.</p>
+        </div>
+        <div>
+          <h3>No guarantee of availability</h3>
+          <p>This is a personal, non-commercial project. It may change, break, or be discontinued at any time and without notice.</p>
+        </div>
+      </div>
+    </section>
 
-  <hr class="rule">
-  <p><a href="/">&larr; Back to the main page</a></p>
+    <section id="liability" aria-labelledby="liab-h">
+      <h2 id="liab-h"><span class="num" aria-hidden="true">06</span>Limitation of liability</h2>
+      <p>To the maximum extent permitted by applicable law, the operator shall not be liable for any direct, indirect, incidental, special, consequential, exemplary, or punitive damages, or for any loss of data, privacy, profits, or goodwill, arising out of or relating to your use of this tool or to the creation, storage, use, disclosure, or loss of any copy of health information created through it &mdash; whether based in contract, tort, negligence, strict liability, or otherwise, and whether or not the operator has been advised of the possibility of such damages.</p>
+      <p style="color:var(--muted); font-size:17px;">Some jurisdictions do not allow the exclusion of certain warranties or the limitation of certain liabilities. Where such a limitation is not permitted, the exclusions above apply to the fullest extent permitted by law, and nothing in these terms limits liability that cannot lawfully be limited.</p>
+    </section>
 
-  <footer>
+    <section id="rights" aria-labelledby="rights-h">
+      <h2 id="rights-h"><span class="num" aria-hidden="true">07</span>Your rights, and what they are not</h2>
+      <p>Your right to obtain this data comes from federal law &mdash; the 21st Century Cures Act (Pub. L. No. 114-255), the HIPAA right of access at 45 CFR &sect; 164.524, and the information-blocking rules at 45 CFR Part 171. This tool merely helps you exercise it.</p>
+      <p>Because no health information is held here, there is nothing for you to request, correct, or delete from us. Requests to access, amend, or restrict your medical record must be made to your health system, which remains the custodian of that record.</p>
+    </section>
+
+    <section id="changes" aria-labelledby="changes-h">
+      <h2 id="changes-h"><span class="num" aria-hidden="true">08</span>Changes to these terms</h2>
+      <p>These terms may be updated. The date at the top reflects the most recent revision. Continued use after a change constitutes acceptance of the revised terms.</p>
+    </section>
+
+    <section id="contact" aria-labelledby="contact-h">
+      <h2 id="contact-h"><span class="num" aria-hidden="true">09</span>Contact</h2>
+      <p>JT Perry &mdash; <a href="mailto:jt.perry@gmail.com">jt.perry@gmail.com</a></p>
+      <p><a href="/" style="display:inline-flex; align-items:center; min-height:48px; font-size:16.5px; font-weight:600;">&larr; Back to the main page</a></p>
+    </section>
+
+  </main>
+</div>
+
+<footer class="site pad">
+  <div class="inner">
     <p>An independent tool for exercising your right of access under the 21st Century Cures Act.</p>
-    <p>Operated by JT Perry &middot;
-       <a href="mailto:jt.perry@gmail.com">jt.perry@gmail.com</a></p>
-  </footer>
+    <p class="who">Operated by JT Perry &middot; <a href="mailto:jt.perry@gmail.com">jt.perry@gmail.com</a></p>
+  </div>
+</footer>
 
-</main>
+<script>
+/*
+ * Table-of-contents scroll spy.
+ *
+ * aria-current is the only state written; the stylesheet keys off it, so what a
+ * screen reader announces and what a sighted reader sees cannot drift apart.
+ * Progressive enhancement: with JS off, the links still work as anchors.
+ */
+(function () {
+  var toc = document.getElementById('toc');
+  if (!toc) return;
+
+  var links = {};
+  Array.prototype.forEach.call(toc.querySelectorAll('[data-toc]'), function (a) {
+    links[a.dataset.toc] = a;
+  });
+
+  function setActive(id) {
+    Object.keys(links).forEach(function (key) {
+      if (key === id) links[key].setAttribute('aria-current', 'true');
+      else links[key].removeAttribute('aria-current');
+    });
+  }
+
+  var ids = Object.keys(links);
+
+  // Choose by position rather than by intersection order. Sorting intersecting
+  // entries by top picks the section you have just scrolled *past* - its top is the
+  // most negative - so the rail lagged one entry behind the heading on screen.
+  function refresh() {
+    var active = ids[0];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (el && el.getBoundingClientRect().top <= 120) active = ids[i];
+    }
+    // At the foot of the document the final sections can never reach the top, so
+    // without this the last entry is never markable however far you scroll.
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+      active = ids[ids.length - 1];
+    }
+    setActive(active);
+  }
+
+  // Driven by scroll rather than IntersectionObserver. With scroll-behavior: smooth
+  // the observer's last callback lands mid-animation, so the resting position was
+  // never evaluated and clicking a rail link could leave the wrong entry marked.
+  var queued = false;
+  function onScroll() {
+    if (queued) return;
+    queued = true;
+    window.requestAnimationFrame(function () { queued = false; refresh(); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
+
+  refresh(); // so the rail is never blank before the first scroll
+})();
+</script>
 </body>
 </html>
