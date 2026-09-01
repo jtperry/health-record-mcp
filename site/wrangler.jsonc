@@ -29,15 +29,17 @@
     { "pattern": "health.circlejtp.me", "custom_domain": true }
   ],
 
-  "vars": {
-    // Set once the Epic app registration is approved AND legal review is complete.
-    // While empty, the site renders honestly as "not yet available" rather than
-    // offering a connect button that cannot work.
-    "EPIC_CLIENT_ID": "",
-
-    // Lets us exercise the real flow against Epic's sandbox before the connect
-    // button is offered publicly: /ehr-connect?preview=<token> sets a short-lived
-    // cookie so the Epic redirect back to /ehr-callback is also allowed.
-    "PREVIEW_TOKEN": "819088d6b5ea71081599da21"
-  }
+  // EPIC_CLIENT_ID is set as a Worker secret, not here:
+  //   npx wrangler secret put EPIC_CLIENT_ID
+  // It is not a secret in the cryptographic sense - a SMART public client cannot hold
+  // one, and this value appears in the bundle and in every authorize URL. Keeping it
+  // out of the committed config stops a fork from shipping our registration and having
+  // its users' authorizations attributed to us by Epic. The value of record lives in
+  // 1Password: Employee -> Epic -> Production Client ID.
+  //
+  // PREVIEW_TOKEN is deliberately absent. It gated the retriever before launch; with
+  // EPIC_CLIENT_ID set, retrieverAllowed() returns true for everyone and the token
+  // granted nothing extra. Removing it means the committed value - public in git
+  // history - cannot be presented as a bypass of anything. Do not reintroduce that
+  // value; generate a new one if a gate is ever needed again.
 }

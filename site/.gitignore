@@ -1,3 +1,8 @@
 node_modules/
 .wrangler/
 .dev.vars
+
+# Build output: contains the Epic client id resolved at build time, so it must not
+# be committed - a fork building from this repo would otherwise ship our registration.
+# Rebuild with: bun run ./scripts/build-ehretriever.ts -c config.circlejtp.json
+public/dist/ehretriever.bundle.js

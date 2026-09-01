@@ -11,7 +11,14 @@
 
 set -uo pipefail
 
-CLIENT_ID="${EPIC_SANDBOX_CLIENT_ID:-8d804225-8ca7-430b-99f1-2b7762258e09}"
+# No default: the client id lives in 1Password, not in this repository.
+#   export EPIC_SANDBOX_CLIENT_ID="$(op read 'op://Employee/Epic/Non-Production Client ID')"
+CLIENT_ID="${EPIC_SANDBOX_CLIENT_ID:-}"
+if [ -z "$CLIENT_ID" ]; then
+    echo "EPIC_SANDBOX_CLIENT_ID is not set." >&2
+    echo "  export EPIC_SANDBOX_CLIENT_ID=\"\$(op read 'op://Employee/Epic/Non-Production Client ID')\"" >&2
+    exit 2
+fi
 REDIRECT="${EPIC_REDIRECT_URI:-https://health.circlejtp.me/ehr-callback}"
 AUD="https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4"
 

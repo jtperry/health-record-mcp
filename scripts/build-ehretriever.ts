@@ -98,11 +98,33 @@ async function main() {
             process.exit(1);
         }
 
+        // A clientId of the form ${ENV_VAR} is read from the environment at build time.
+        //
+        // The client id is not a secret - a SMART public client cannot hold one, and this
+        // value ends up in the bundle and in every authorize URL. It is kept out of the
+        // committed config for a different reason: so that a fork building from this
+        // repository does not silently ship *our* registration, which would make its
+        // users' authorizations appear to Epic as our app.
+        const rawClientId = entry.vendorConfig.clientId;
+        const envMatch = /^\$\{([A-Z0-9_]+)\}$/.exec(rawClientId);
+        let resolvedClientId = rawClientId;
+        if (envMatch) {
+            const varName = envMatch[1];
+            const fromEnv = process.env[varName];
+            if (!fromEnv) {
+                console.error(`Error: brand entry '${entry.url}' needs ${varName}, which is not set.`);
+                console.error(`  Retrieve it from 1Password: op read "op://Employee/Epic/Production Client ID"`);
+                process.exit(1);
+            }
+            resolvedClientId = fromEnv;
+            console.log(`Resolved clientId for '${entry.url}' from ${varName}.`);
+        }
+
         finalBrandIndex.push({
             url: entry.url,
             tags: entry.tags,
             vendorConfig: {
-                clientId: entry.vendorConfig.clientId,
+                clientId: resolvedClientId,
                 scopes: entry.vendorConfig.scopes,
                 ...(entry.vendorConfig.redirectUrl && { redirectUrl: entry.vendorConfig.redirectUrl }),
                 ...(entry.vendorConfig.note && { note: entry.vendorConfig.note })

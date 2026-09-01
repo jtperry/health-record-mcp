@@ -393,8 +393,8 @@ ships in the browser bundle by design):
 
 | | |
 |---|---|
-| Production Client ID | `0eb38377-086f-4850-98b3-db0bac91e332` |
-| Non-Production Client ID | `8d804225-8ca7-430b-99f1-2b7762258e09` |
+| Production Client ID | 1Password → Employee → Epic → *Production Client ID* |
+| Non-Production Client ID | 1Password → Employee → Epic → *Non-Production Client ID* |
 
 **Marking the app ready for production is a one-way door.** Epic states the app cannot be
 edited afterwards, so use *Save & Ready for Sandbox* until everything is settled.
@@ -579,7 +579,7 @@ First end-to-end attempt against Epic's sandbox, driven through a real browser.
 the retriever builds:
 
 ```
-client_id=8d804225-8ca7-430b-99f1-2b7762258e09   (non-production)
+client_id=<non-production client id>            (1Password → Employee → Epic)
 scope=patient/*.read                              (SMART v1, as registered)
 redirect_uri=https://health.circlejtp.me/ehr-callback
 code_challenge_method=S256
@@ -627,7 +627,7 @@ behaviour for everyone:
 
 | Client id | Response |
 |---|---|
-| `8d804225-…` (ours) | MyChart login page |
+| ours | MyChart login page |
 | all-zeros control | `OAuth2 Error` |
 
 **What this does and does not prove.** It proves the client id resolves and Epic will render a

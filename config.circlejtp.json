@@ -9,7 +9,7 @@
           "prod"
         ],
         "vendorConfig": {
-          "clientId": "0eb38377-086f-4850-98b3-db0bac91e332",
+          "clientId": "${EPIC_PROD_CLIENT_ID}",
           "scopes": "patient/*.read",
           "redirectUrl": "https://health.circlejtp.me/ehr-callback"
         }
@@ -21,7 +21,7 @@
           "sandbox"
         ],
         "vendorConfig": {
-          "clientId": "8d804225-8ca7-430b-99f1-2b7762258e09",
+          "clientId": "${EPIC_SANDBOX_CLIENT_ID}",
           "scopes": "patient/*.read",
           "redirectUrl": "https://health.circlejtp.me/ehr-callback",
           "note": "Epic sandbox test patient. Credentials are published in Epic's own sandbox documentation: https://fhir.epic.com/Documentation?docId=testpatients"
