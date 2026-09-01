@@ -184,9 +184,9 @@ site says so plainly rather than offering a connect button that cannot work.
 
 ## Preview gate
 
-The retriever bundle is deployed before the connect button is offered publicly, so the flow
-can be exercised against Epic's sandbox while legal review is outstanding. `/ehr-connect`,
-`/ehr-callback` and `/ehretriever.html` are therefore gated:
+The retriever bundle is deployed before the connect button is offered publicly, so the flow can
+be exercised against Epic's sandbox without the site being open to anyone who finds the URL.
+`/ehr-connect`, `/ehr-callback` and `/ehretriever.html` are therefore gated:
 
 - allowed outright once `EPIC_CLIENT_ID` is set;
 - otherwise allowed only with `?preview=<PREVIEW_TOKEN>`, which sets a one-hour cookie so

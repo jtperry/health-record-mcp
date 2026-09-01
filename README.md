@@ -150,8 +150,8 @@ This project includes a self-contained web application that allows users to conn
     directory weekly so providers that move endpoints do not silently vanish from the list.
 
     **The connect flow is not open to the public yet.** The Epic app registration has not been
-    approved for production, and until it is, the site says so rather than offering a button that
-    cannot work. Registration approval is one of two gates; the other is legal review.
+    approved for production, and until it is, the site says so plainly rather than offering a
+    button that cannot work. There is no timeline for opening it.
 
     Upstream also publishes a hosted client at
     [`https://mcp.fhir.me/ehr-connect`](https://mcp.fhir.me/ehr-connect), which is a separate
