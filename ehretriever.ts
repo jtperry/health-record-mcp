@@ -58,7 +58,10 @@ let currentBrandRenderAbortController: AbortController | null = null;
 let brandDebounceTimer: number | null = null;
 let currentFilteredItems: any[] = [];
 let currentPage = 1;
-const ITEMS_PER_PAGE = 1200;
+// 25, not 1200. Chunked rendering keeps the main thread responsive, but once tiles are
+// real buttons (see createBrandTileElement) a 1200-item page is a keyboard trap: tabbing
+// past the list is impossible. The pager exists; let it work.
+const ITEMS_PER_PAGE = 25;
 // Removed single currentVendorName; each brand item will now carry its own _vendorName property
 
 // NEW: Pagination DOM Elements
@@ -68,6 +71,8 @@ let brandNextBtn: HTMLButtonElement | null;
 let brandPageInfo: HTMLElement | null;
 
 // --- Brand Selector Configuration ---
+// Set when a pager button moved the page, so focus follows the new content.
+let pendingPageFocus = false;
 const RENDER_CHUNK_SIZE = 50;
 const RENDER_DELAY = 0; // ms delay between rendering chunks
 const DEBOUNCE_DELAY = 300; // ms delay for search input debounce
@@ -76,7 +81,11 @@ const DEBOUNCE_DELAY = 300; // ms delay for search input debounce
 function updateStatus(message: string, isError: boolean = false) {
     if (statusMessageElement) {
         statusMessageElement.textContent = message;
-        statusMessageElement.style.color = isError ? 'red' : 'black';
+        // Colour alone cannot carry "this is an error" (SC 1.4.1), and the old inline
+        // red/black both failed contrast and overrode the page's own palette. The class
+        // owns the colour and adds a non-colour cue; the role makes errors interrupt.
+        statusMessageElement.classList.toggle('is-error', isError);
+        statusMessageElement.setAttribute('role', isError ? 'alert' : 'status');
     }
     console.log(`Status: ${message}`);
     if (isError) {
@@ -106,6 +115,10 @@ function showConfirmationContainer(show: boolean) {
     if (confirmationContainer) confirmationContainer.style.display = 'none';
 }
 
+// Throttle state for the progress live region.
+let lastAnnouncedPercent = -Infinity;
+let lastAnnouncedAt = 0;
+
 // Helper function to update progress UI
 function updateProgress(completed: number, total: number, message?: string) {
     const progressBar = document.getElementById('fetch-progress') as HTMLProgressElement;
@@ -114,7 +127,21 @@ function updateProgress(completed: number, total: number, message?: string) {
     if (progressBar && progressText) {
         const percentage = total > 0 ? (completed / total) * 100 : 0;
         progressBar.value = percentage;
-        progressText.textContent = `(${completed}/${total}) ${message || ''}`.trim();
+        progressBar.textContent = `${Math.round(percentage)}%`; // fallback content
+
+        // Prose, not `(318/512)`.
+        const line = `${completed} of ${total} \u00B7 ${Math.round(percentage)}%`;
+
+        // #progress-text is a live region, so it cannot be rewritten once per resource -
+        // that makes a screen reader unusable. Announce on a ~10% or ~2s boundary, and
+        // always on the final update.
+        const now = Date.now();
+        const done = total > 0 && completed >= total;
+        if (done || percentage - lastAnnouncedPercent >= 10 || now - lastAnnouncedAt >= 2000) {
+            lastAnnouncedPercent = percentage;
+            lastAnnouncedAt = now;
+            progressText.textContent = message ? `${line} \u00B7 ${message}` : line;
+        }
         console.log(`Progress: ${completed}/${total} (${percentage.toFixed(1)}%) ${message || ''}`);
     }
 
@@ -212,26 +239,67 @@ function generateRandomString(length = 40) {
 const safeLower = (str: any): string => (str ? String(str).toLowerCase() : '');
 
 // Creates a DOM element for a single brand item tile
-function createBrandTileElement(item: any): HTMLDivElement {
-    const tile = document.createElement('div');
-    tile.className = 'brand-tile';
-    let detailsHTML = `<h3>${item.displayName}</h3>`;
-    detailsHTML += `<p class="provider-info">Data Provider: ${item.brandName}</p>`;
+/**
+ * Location for display, for every item rather than only facilities.
+ *
+ * In the real directory most rows have no city — 69 of the 150 in
+ * site/public/brands/epic-sample.json, and brand-level rows never carry one — so the old
+ * `itemType === 'facility'` guard left most rows with no place line and a ragged list.
+ * Emitting an explicit "not listed" keeps every row the same shape.
+ */
+function formatLocation(item: any): string {
+    const parts = [item.city, item.state].filter(Boolean);
+    if (item.postalCode && parts.length) parts.push(String(item.postalCode).split('-')[0]);
+    return parts.length ? parts.join(', ') : 'Location not listed';
+}
+
+function createBrandTileElement(item: any): HTMLLIElement {
+    // A <div> with a click handler is not focusable, exposes no role, and announces
+    // nothing on activation (SC 2.1.1, 4.1.2). A real <button> gets all of that free.
+    //
+    // Built with createElement/textContent rather than innerHTML: the brand directory is
+    // third-party data, and an apostrophe in an organisation name is enough to break the
+    // markup that the old string interpolation produced.
+    const li = document.createElement('li');
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'brand-tile';
+
+    const text = document.createElement('span');
+    text.className = 'brand-tile-text';
+
+    // No <h3> here. These are not section headings, and one per row makes the heading
+    // outline useless for screen-reader navigation. The name is the button's own label.
+    const name = document.createElement('span');
+    name.className = 'brand-tile-name';
+    name.textContent = item.displayName;
+    text.appendChild(name);
+
+    const provider = document.createElement('span');
+    provider.className = 'brand-tile-provider';
+    provider.textContent = `Data provider: ${item.brandName}`;
+    text.appendChild(provider);
+
     const hasCollapseInfo = typeof item._matchedCount === 'number' && typeof item._totalCount === 'number';
 
-    // Don't show specific location if it's a collapsed rep
-    if (!hasCollapseInfo && item.itemType === 'facility') {
-        const locationParts = [item.city, item.state, item.postalCode].filter(Boolean);
-        if (locationParts.length > 0) { detailsHTML += `<p class="location-info">Location: ${locationParts.join(', ')}</p>`; }
-    }
+    const location = document.createElement('span');
+    location.className = 'brand-tile-location';
+    location.textContent = hasCollapseInfo
+        ? `Matched ${item._matchedCount} of ${item._totalCount} card${item._totalCount !== 1 ? 's' : ''}`
+        : formatLocation(item);
+    text.appendChild(location);
 
-    // Show the "Matched X of Y cards" info if applicable
-    if (hasCollapseInfo) {
-        detailsHTML += `<p class="collapse-info">Matched ${item._matchedCount} of ${item._totalCount} card${item._totalCount !== 1 ? 's' : ''}</p>`;
-    }
-    tile.innerHTML = detailsHTML;
-    tile.addEventListener('click', () => showBrandModal(item));
-    return tile;
+    button.appendChild(text);
+
+    const kind = document.createElement('span');
+    kind.className = 'brand-tile-kind';
+    kind.textContent = item.itemType === 'brand' ? 'Health system' : 'Facility';
+    button.appendChild(kind);
+
+    button.addEventListener('click', () => showBrandModal(item));
+    li.appendChild(button);
+    return li;
 }
 
 // --- Helper: Collapse multiple items from the same brand into a single representative ---
@@ -352,15 +420,59 @@ function renderCurrentPage() {
 
     renderBrandItemsInChunks(itemsToDisplay); // Render only this page's items
 
-    // Update page info text
-    brandPageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+    brandPageInfo.textContent = totalItems === 0
+        ? ''
+        : `Page ${currentPage} of ${totalPages || 1} · showing ${startIndex + 1}–${Math.min(endIndex, totalItems)} of ${totalItems}`;
 
-    // Update button states
+    // Keep the platform attribute doing the disabling.
     brandPrevBtn.disabled = currentPage <= 1;
     brandNextBtn.disabled = currentPage >= totalPages;
 
-    // Show/hide pagination controls
-    brandPaginationControls.style.display = totalPages > 1 ? 'block' : 'none';
+    brandPaginationControls.style.display = totalPages > 1 ? 'flex' : 'none';
+
+    setResultStatus();
+
+    // A page change replaces everything below the pager. Without moving focus, a keyboard
+    // user activates "Next" and stays on the button while the content they asked for is
+    // somewhere above them, unannounced.
+    if (pendingPageFocus) {
+        pendingPageFocus = false;
+        window.setTimeout(() => {
+            brandResultsContainer?.querySelector<HTMLElement>('button')?.focus();
+        }, 0);
+    }
+}
+
+/**
+ * One status line for the three states the list can be in.
+ *
+ * Without this a screen-reader user types into the search box and hears nothing at all:
+ * the spinner is purely visual and the result count was never stated. Announced after the
+ * render rather than per keystroke — the 300 ms debounce already provides the quiet.
+ */
+function setResultStatus(errorMessage?: string) {
+    if (!brandInitialLoadingMessage) return;
+    brandInitialLoadingMessage.style.display = 'block';
+
+    if (errorMessage) {
+        brandInitialLoadingMessage.textContent = errorMessage;
+        brandInitialLoadingMessage.classList.add('is-error');
+        return;
+    }
+    brandInitialLoadingMessage.classList.remove('is-error');
+
+    const query = brandSearchInput?.value.trim() ?? '';
+    const n = currentFilteredItems.length;
+
+    if (!query) {
+        brandInitialLoadingMessage.textContent =
+            `${n.toLocaleString()} ${n === 1 ? 'organization' : 'organizations'} available. Start typing to narrow the list.`;
+    } else if (n === 0) {
+        brandInitialLoadingMessage.textContent = `No matches for \u201C${query}\u201D.`;
+    } else {
+        brandInitialLoadingMessage.textContent =
+            `${n.toLocaleString()} ${n === 1 ? 'match' : 'matches'} for \u201C${query}\u201D.`;
+    }
 }
 
 // Filters items based on search input and triggers rendering
@@ -431,47 +543,74 @@ function debounce(func: (...args: any[]) => void, delay: number) {
 
 const debouncedBrandSearchHandler = debounce(handleBrandSearch, DEBOUNCE_DELAY);
 
+// The element that opened the dialog, so focus can be handed back on close.
+let lastFocusedTile: HTMLElement | null = null;
+
+function addDetailRow(dl: HTMLDListElement, label: string, value: string, mono = false) {
+    const dt = document.createElement('dt');
+    dt.textContent = label;
+    const dd = document.createElement('dd');
+    dd.textContent = value;
+    if (mono) dd.className = 'is-mono';
+    dl.appendChild(dt);
+    dl.appendChild(dd);
+}
+
 // Shows the modal with details of the selected item
 function showBrandModal(item: any) {
     if (!brandModalBackdrop || !brandModalTitle || !brandModalDetails) return;
     if (currentBrandRenderAbortController) { return; } // Don't show modal during render
 
     selectedBrandItem = item;
-    brandModalTitle.textContent = `Connect to ${item.displayName}?`;
-    let detailsHTML = `<p><strong>Display Name:</strong> ${item.displayName}</p>`;
-    detailsHTML += `<p><strong>Data Provider:</strong> ${item.brandName}</p>`;
+    lastFocusedTile = document.activeElement as HTMLElement | null;
+
+    // A fixed heading, with the organisation in the body. The old
+    // `Connect to ${displayName}?` produces a 100-character heading for the longest real
+    // entry in the directory.
+    brandModalTitle.textContent = 'Confirm your health system';
+
+    // Rebuilt with createElement/textContent — same injection concern as the tiles.
+    brandModalDetails.textContent = '';
+
+    const name = document.createElement('p');
+    name.className = 'brand-modal-org';
+    name.textContent = item.displayName;
+    brandModalDetails.appendChild(name);
+
+    const dl = document.createElement('dl');
+    addDetailRow(dl, 'Data provider', item.brandName);
+
     const hasCollapseInfo = typeof item._matchedCount === 'number' && typeof item._totalCount === 'number';
+    addDetailRow(dl, 'Location', hasCollapseInfo
+        ? `Matched ${item._matchedCount} of ${item._totalCount} card${item._totalCount !== 1 ? 's' : ''}`
+        : formatLocation(item));
 
-    // Don't show specific location if it's a collapsed rep
-    if (!hasCollapseInfo && item.itemType === 'facility') {
-        const locationParts = [item.city, item.state, item.postalCode].filter(Boolean);
-        if (locationParts.length > 0) { detailsHTML += `<p><strong>Location:</strong> ${locationParts.join(', ')}</p>`; }
-    }
+    // One endpoint, not a list of all of them. handleBrandConnect() uses endpoints[0]
+    // regardless, so listing the rest misleads about what is about to happen — and the old
+    // markup distinguished the FHIR one by font-weight alone, which is presentation
+    // carrying meaning (SC 1.3.1, 1.4.1).
+    const endpoint = item.endpoints?.[0]?.url;
+    addDetailRow(dl, 'FHIR endpoint', endpoint || 'None found', true);
+    brandModalDetails.appendChild(dl);
 
-    // Show the "Matched X of Y cards" info if applicable
-    if (hasCollapseInfo) {
-        detailsHTML += `<p><strong>Matched:</strong> ${item._matchedCount} of ${item._totalCount} card${item._totalCount !== 1 ? 's' : ''}</p>`;
-    }
-
-    // Display endpoints - **Crucially, we need a FHIR endpoint here**
-    if (item.endpoints && Array.isArray(item.endpoints) && item.endpoints.length > 0) {
-        detailsHTML += `<p><strong>Endpoints:</strong></p><ul>`;
-        item.endpoints.forEach((ep: { url: string, name?: string, type?: string }) => {
-            // Highlight potential FHIR endpoints
-            const isFhir = ep.type === 'FHIR_BASE_URL' || safeLower(ep.url).includes('fhir');
-            detailsHTML += `<li style="${isFhir ? 'font-weight: bold;' : ''}">${ep.url}${ep.name ? ` (${ep.name})` : ''}${ep.type ? ` [${ep.type}]` : ''}</li>`;
-        });
-        detailsHTML += `</ul>`;
-    } else {
-        detailsHTML += `<p><strong>Endpoints:</strong> None found</p>`;
-    }
-    // Display sandbox login note if available
     const vc: VendorAuthConfig | undefined = (item as any)._vendorConfig;
     if (vc && vc.note) {
-        detailsHTML += `<p style="margin-top:0.8rem;"><em>Login Info:</em> ${vc.note}</p>`;
+        const note = document.createElement('p');
+        note.className = 'brand-modal-note';
+        note.textContent = `Login info: ${vc.note}`;
+        brandModalDetails.appendChild(note);
     }
-    brandModalDetails.innerHTML = detailsHTML;
+
     brandModalBackdrop.classList.add('visible');
+
+    // Keep the list behind the dialog out of the tab order and off the accessibility tree.
+    if (brandSelectorContainer) {
+        (brandSelectorContainer as any).inert = true;
+        brandSelectorContainer.setAttribute('aria-hidden', 'true');
+    }
+
+    // Cancel, not Connect: the safe default is the one that does nothing.
+    brandModalCancel?.focus();
 }
 
 // Hides the modal
@@ -479,6 +618,35 @@ function hideBrandModal() {
     if (!brandModalBackdrop) return;
     brandModalBackdrop.classList.remove('visible');
     selectedBrandItem = null;
+
+    if (brandSelectorContainer) {
+        (brandSelectorContainer as any).inert = false;
+        brandSelectorContainer.removeAttribute('aria-hidden');
+    }
+
+    // Back where it came from, so the list does not restart from the top.
+    lastFocusedTile?.focus();
+    lastFocusedTile = null;
+}
+
+/**
+ * Escape to close, Tab cycles within the dialog.
+ *
+ * Registered once at init rather than inside the brand-load success path, where the old
+ * bare Escape listener lived — a directory load failure left Escape dead.
+ */
+function onModalKeydown(event: KeyboardEvent) {
+    if (!brandModalBackdrop?.classList.contains('visible')) return;
+    if (event.key === 'Escape') { event.preventDefault(); hideBrandModal(); return; }
+    if (event.key !== 'Tab' || !brandModal) return;
+
+    const focusable = brandModal.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
 }
 
 interface VendorAuthConfig { clientId: string; scopes: string; redirectUrl?: string; note?: string }
@@ -621,8 +789,8 @@ async function fetchBrandsAndInitialize() {
     if (!brandInitialLoadingMessage || !brandResultsContainer || !brandSearchInput || !brandSearchSpinner || !brandPaginationControls) {
         console.error("[fetchBrands] Error: Required DOM elements not found!");
         if (brandInitialLoadingMessage) {
-            brandInitialLoadingMessage.textContent = 'Initialization Error: UI elements missing.';
-            brandInitialLoadingMessage.style.color = 'red';
+            brandInitialLoadingMessage.textContent = 'Initialization error: page elements are missing.';
+            brandInitialLoadingMessage.classList.add('is-error');
         }
         return;
     }
@@ -723,21 +891,13 @@ async function fetchBrandsAndInitialize() {
         if (brandModalCancel) brandModalCancel.addEventListener('click', hideBrandModal);
         if (brandModalConnect) brandModalConnect.addEventListener('click', handleBrandConnect);
         if (brandModalBackdrop) brandModalBackdrop.addEventListener('click', (event) => { if (event.target === brandModalBackdrop) hideBrandModal(); });
-        if (brandPrevBtn) brandPrevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderCurrentPage(); } });
-        if (brandNextBtn) brandNextBtn.addEventListener('click', () => { const totalPages = Math.ceil(currentFilteredItems.length / ITEMS_PER_PAGE); if (currentPage < totalPages) { currentPage++; renderCurrentPage(); } });
-
-        // Add listener to close modal with Escape key
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && brandModalBackdrop?.classList.contains('visible')) {
-                hideBrandModal();
-            }
-        });
+        if (brandPrevBtn) brandPrevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; pendingPageFocus = true; renderCurrentPage(); } });
+        if (brandNextBtn) brandNextBtn.addEventListener('click', () => { const totalPages = Math.ceil(currentFilteredItems.length / ITEMS_PER_PAGE); if (currentPage < totalPages) { currentPage++; pendingPageFocus = true; renderCurrentPage(); } });
 
     } catch (error: any) {
         console.error('[fetchBrands] Error:', error);
         if (brandInitialLoadingMessage) {
-            brandInitialLoadingMessage.textContent = `Error loading organizations: ${error.message}`;
-            brandInitialLoadingMessage.style.color = 'red';
+            setResultStatus(`The organization directory could not be loaded: ${error.message} Reload the page to try again.`);
         }
         brandResultsContainer.style.display = 'none';
         brandSearchInput.disabled = true;
@@ -765,6 +925,10 @@ document.addEventListener('DOMContentLoaded', () => {
     brandPrevBtn = document.getElementById('brand-prev-btn') as HTMLButtonElement | null;
     brandNextBtn = document.getElementById('brand-next-btn') as HTMLButtonElement | null;
     brandPageInfo = document.getElementById('brand-page-info');
+
+    // Registered here, not in the brand-load success path: a directory load failure must
+    // not leave Escape dead in a dialog the user can still open.
+    document.addEventListener('keydown', onModalKeydown);
     // REMOVED fetching references for deleted form elements
     // formContainer = document.getElementById('form-container');
     // ehrForm = document.getElementById('ehr-form') as HTMLFormElement | null;
@@ -943,14 +1107,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 // actual opener, so any site could open this page with its own origin in the
                 // hash and receive a complete medical record, using this app's registered
                 // client id to obtain it. See docs/health.circlejtp.me-plan.md 9.4.
-                finalStatus += `. You may download your data or close this window.`;
+                finalStatus += ` Your record is assembled in this browser and has not been sent anywhere.`;
                 updateStatus(finalStatus);
                 if (downloadDataBtn) {
-                    downloadDataBtn.style.display = 'inline-block';
+                    downloadDataBtn.style.display = 'inline-flex';
                     downloadDataBtn.onclick = () => {
-                        triggerJsonDownload(fetchedClientFullEhrObject, 'ehr-data.json');
-                        if (downloadDataBtn) downloadDataBtn.disabled = true;
+                        // Dated, so two downloads do not collide and the user can tell
+                        // later which is which.
+                        const stamp = new Date().toISOString().slice(0, 10);
+                        triggerJsonDownload(fetchedClientFullEhrObject, `health-record-${stamp}.json`);
+                        // Deliberately left enabled. The old code disabled the button with
+                        // no explanation, which is a dead end if the save dialog was
+                        // dismissed; and a second copy is a reasonable thing to want.
+                        updateStatus(`Saved to your device as health-record-${stamp}.json. Protect this file \u2014 HIPAA does not cover it once it is yours.`);
                     };
+                    // The user has been waiting through a long fetch; nothing otherwise
+                    // tells a screen reader that it is over.
+                    window.setTimeout(() => statusMessageElement?.focus(), 0);
                 }
 
             } catch (err: any) {

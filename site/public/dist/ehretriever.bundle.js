@@ -1257,7 +1257,7 @@ var require_lodash = __commonJS(function(exports, module) {
     }
     var runInContext = function runInContext2(context) {
       context = context == null ? root : _.defaults(root.Object(), context, _.pick(root, contextProps));
-      var { Array: Array2, Date, Error: Error2, Function: Function2, Math: Math2, Object: Object2, RegExp: RegExp2, String: String2, TypeError: TypeError2 } = context;
+      var { Array: Array2, Date: Date2, Error: Error2, Function: Function2, Math: Math2, Object: Object2, RegExp: RegExp2, String: String2, TypeError: TypeError2 } = context;
       var arrayProto = Array2.prototype, funcProto = Function2.prototype, objectProto = Object2.prototype;
       var coreJsData = context["__core-js_shared__"];
       var funcToString = funcProto.toString;
@@ -1279,8 +1279,8 @@ var require_lodash = __commonJS(function(exports, module) {
           return func;
         } catch (e) {}
       }();
-      var ctxClearTimeout = context.clearTimeout !== root.clearTimeout && context.clearTimeout, ctxNow = Date && Date.now !== root.Date.now && Date.now, ctxSetTimeout = context.setTimeout !== root.setTimeout && context.setTimeout;
-      var { ceil: nativeCeil, floor: nativeFloor } = Math2, nativeGetSymbols = Object2.getOwnPropertySymbols, nativeIsBuffer = Buffer2 ? Buffer2.isBuffer : undefined2, nativeIsFinite = context.isFinite, nativeJoin = arrayProto.join, nativeKeys = overArg(Object2.keys, Object2), nativeMax = Math2.max, nativeMin = Math2.min, nativeNow = Date.now, nativeParseInt = context.parseInt, nativeRandom = Math2.random, nativeReverse = arrayProto.reverse;
+      var ctxClearTimeout = context.clearTimeout !== root.clearTimeout && context.clearTimeout, ctxNow = Date2 && Date2.now !== root.Date.now && Date2.now, ctxSetTimeout = context.setTimeout !== root.setTimeout && context.setTimeout;
+      var { ceil: nativeCeil, floor: nativeFloor } = Math2, nativeGetSymbols = Object2.getOwnPropertySymbols, nativeIsBuffer = Buffer2 ? Buffer2.isBuffer : undefined2, nativeIsFinite = context.isFinite, nativeJoin = arrayProto.join, nativeKeys = overArg(Object2.keys, Object2), nativeMax = Math2.max, nativeMin = Math2.min, nativeNow = Date2.now, nativeParseInt = context.parseInt, nativeRandom = Math2.random, nativeReverse = arrayProto.reverse;
       var DataView2 = getNative(context, "DataView"), Map2 = getNative(context, "Map"), Promise2 = getNative(context, "Promise"), Set2 = getNative(context, "Set"), WeakMap2 = getNative(context, "WeakMap"), nativeCreate = getNative(Object2, "create");
       var metaMap = WeakMap2 && new WeakMap2;
       var realNames = {};
@@ -12373,18 +12373,20 @@ var currentBrandRenderAbortController = null;
 var brandDebounceTimer = null;
 var currentFilteredItems = [];
 var currentPage = 1;
-var ITEMS_PER_PAGE = 1200;
+var ITEMS_PER_PAGE = 25;
 var brandPaginationControls;
 var brandPrevBtn;
 var brandNextBtn;
 var brandPageInfo;
+var pendingPageFocus = false;
 var RENDER_CHUNK_SIZE = 50;
 var RENDER_DELAY = 0;
 var DEBOUNCE_DELAY = 300;
 function updateStatus(message, isError = false) {
   if (statusMessageElement) {
     statusMessageElement.textContent = message;
-    statusMessageElement.style.color = isError ? "red" : "black";
+    statusMessageElement.classList.toggle("is-error", isError);
+    statusMessageElement.setAttribute("role", isError ? "alert" : "status");
   }
   console.log(`Status: ${message}`);
   if (isError) {
@@ -12409,13 +12411,23 @@ function showConfirmationContainer(show) {
   if (confirmationContainer)
     confirmationContainer.style.display = "none";
 }
+var lastAnnouncedPercent = -Infinity;
+var lastAnnouncedAt = 0;
 function updateProgress(completed, total, message) {
   const progressBar2 = document.getElementById("fetch-progress");
   const progressText2 = document.getElementById("progress-text");
   if (progressBar2 && progressText2) {
     const percentage = total > 0 ? completed / total * 100 : 0;
     progressBar2.value = percentage;
-    progressText2.textContent = `(${completed}/${total}) ${message || ""}`.trim();
+    progressBar2.textContent = `${Math.round(percentage)}%`;
+    const line = `${completed} of ${total} · ${Math.round(percentage)}%`;
+    const now = Date.now();
+    const done = total > 0 && completed >= total;
+    if (done || percentage - lastAnnouncedPercent >= 10 || now - lastAnnouncedAt >= 2000) {
+      lastAnnouncedPercent = percentage;
+      lastAnnouncedAt = now;
+      progressText2.textContent = message ? `${line} · ${message}` : line;
+    }
     console.log(`Progress: ${completed}/${total} (${percentage.toFixed(1)}%) ${message || ""}`);
   }
   if (total > 0) {
@@ -12471,24 +12483,40 @@ function generateRandomString(length = 40) {
   return result;
 }
 var safeLower = (str) => str ? String(str).toLowerCase() : "";
+function formatLocation(item) {
+  const parts = [item.city, item.state].filter(Boolean);
+  if (item.postalCode && parts.length)
+    parts.push(String(item.postalCode).split("-")[0]);
+  return parts.length ? parts.join(", ") : "Location not listed";
+}
 function createBrandTileElement(item) {
-  const tile = document.createElement("div");
-  tile.className = "brand-tile";
-  let detailsHTML = `<h3>${item.displayName}</h3>`;
-  detailsHTML += `<p class="provider-info">Data Provider: ${item.brandName}</p>`;
+  const li = document.createElement("li");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "brand-tile";
+  const text = document.createElement("span");
+  text.className = "brand-tile-text";
+  const name2 = document.createElement("span");
+  name2.className = "brand-tile-name";
+  name2.textContent = item.displayName;
+  text.appendChild(name2);
+  const provider = document.createElement("span");
+  provider.className = "brand-tile-provider";
+  provider.textContent = `Data provider: ${item.brandName}`;
+  text.appendChild(provider);
   const hasCollapseInfo = typeof item._matchedCount === "number" && typeof item._totalCount === "number";
-  if (!hasCollapseInfo && item.itemType === "facility") {
-    const locationParts = [item.city, item.state, item.postalCode].filter(Boolean);
-    if (locationParts.length > 0) {
-      detailsHTML += `<p class="location-info">Location: ${locationParts.join(", ")}</p>`;
-    }
-  }
-  if (hasCollapseInfo) {
-    detailsHTML += `<p class="collapse-info">Matched ${item._matchedCount} of ${item._totalCount} card${item._totalCount !== 1 ? "s" : ""}</p>`;
-  }
-  tile.innerHTML = detailsHTML;
-  tile.addEventListener("click", () => showBrandModal(item));
-  return tile;
+  const location = document.createElement("span");
+  location.className = "brand-tile-location";
+  location.textContent = hasCollapseInfo ? `Matched ${item._matchedCount} of ${item._totalCount} card${item._totalCount !== 1 ? "s" : ""}` : formatLocation(item);
+  text.appendChild(location);
+  button.appendChild(text);
+  const kind = document.createElement("span");
+  kind.className = "brand-tile-kind";
+  kind.textContent = item.itemType === "brand" ? "Health system" : "Facility";
+  button.appendChild(kind);
+  button.addEventListener("click", () => showBrandModal(item));
+  li.appendChild(button);
+  return li;
 }
 function collapseBrandItems(allItems, matchedItems, scoreMap) {
   const matchedSet = new Set(matchedItems);
@@ -12593,10 +12621,37 @@ function renderCurrentPage() {
   const itemsToDisplay = currentFilteredItems.slice(startIndex, endIndex);
   console.log(`Rendering page ${currentPage} of ${totalPages}. Items ${startIndex + 1}-${Math.min(endIndex, totalItems)} of ${totalItems}.`);
   renderBrandItemsInChunks(itemsToDisplay);
-  brandPageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+  brandPageInfo.textContent = totalItems === 0 ? "" : `Page ${currentPage} of ${totalPages || 1} · showing ${startIndex + 1}–${Math.min(endIndex, totalItems)} of ${totalItems}`;
   brandPrevBtn.disabled = currentPage <= 1;
   brandNextBtn.disabled = currentPage >= totalPages;
-  brandPaginationControls.style.display = totalPages > 1 ? "block" : "none";
+  brandPaginationControls.style.display = totalPages > 1 ? "flex" : "none";
+  setResultStatus();
+  if (pendingPageFocus) {
+    pendingPageFocus = false;
+    window.setTimeout(() => {
+      brandResultsContainer?.querySelector("button")?.focus();
+    }, 0);
+  }
+}
+function setResultStatus(errorMessage) {
+  if (!brandInitialLoadingMessage)
+    return;
+  brandInitialLoadingMessage.style.display = "block";
+  if (errorMessage) {
+    brandInitialLoadingMessage.textContent = errorMessage;
+    brandInitialLoadingMessage.classList.add("is-error");
+    return;
+  }
+  brandInitialLoadingMessage.classList.remove("is-error");
+  const query = brandSearchInput?.value.trim() ?? "";
+  const n2 = currentFilteredItems.length;
+  if (!query) {
+    brandInitialLoadingMessage.textContent = `${n2.toLocaleString()} ${n2 === 1 ? "organization" : "organizations"} available. Start typing to narrow the list.`;
+  } else if (n2 === 0) {
+    brandInitialLoadingMessage.textContent = `No matches for “${query}”.`;
+  } else {
+    brandInitialLoadingMessage.textContent = `${n2.toLocaleString()} ${n2 === 1 ? "match" : "matches"} for “${query}”.`;
+  }
 }
 function handleBrandSearch() {
   if (!brandSearchInput || !brandSearchSpinner)
@@ -12654,6 +12709,17 @@ function debounce(func, delay) {
   };
 }
 var debouncedBrandSearchHandler = debounce(handleBrandSearch, DEBOUNCE_DELAY);
+var lastFocusedTile = null;
+function addDetailRow(dl, label, value, mono = false) {
+  const dt = document.createElement("dt");
+  dt.textContent = label;
+  const dd = document.createElement("dd");
+  dd.textContent = value;
+  if (mono)
+    dd.className = "is-mono";
+  dl.appendChild(dt);
+  dl.appendChild(dd);
+}
 function showBrandModal(item) {
   if (!brandModalBackdrop || !brandModalTitle || !brandModalDetails)
     return;
@@ -12661,41 +12727,68 @@ function showBrandModal(item) {
     return;
   }
   selectedBrandItem = item;
-  brandModalTitle.textContent = `Connect to ${item.displayName}?`;
-  let detailsHTML = `<p><strong>Display Name:</strong> ${item.displayName}</p>`;
-  detailsHTML += `<p><strong>Data Provider:</strong> ${item.brandName}</p>`;
+  lastFocusedTile = document.activeElement;
+  brandModalTitle.textContent = "Confirm your health system";
+  brandModalDetails.textContent = "";
+  const name2 = document.createElement("p");
+  name2.className = "brand-modal-org";
+  name2.textContent = item.displayName;
+  brandModalDetails.appendChild(name2);
+  const dl = document.createElement("dl");
+  addDetailRow(dl, "Data provider", item.brandName);
   const hasCollapseInfo = typeof item._matchedCount === "number" && typeof item._totalCount === "number";
-  if (!hasCollapseInfo && item.itemType === "facility") {
-    const locationParts = [item.city, item.state, item.postalCode].filter(Boolean);
-    if (locationParts.length > 0) {
-      detailsHTML += `<p><strong>Location:</strong> ${locationParts.join(", ")}</p>`;
-    }
-  }
-  if (hasCollapseInfo) {
-    detailsHTML += `<p><strong>Matched:</strong> ${item._matchedCount} of ${item._totalCount} card${item._totalCount !== 1 ? "s" : ""}</p>`;
-  }
-  if (item.endpoints && Array.isArray(item.endpoints) && item.endpoints.length > 0) {
-    detailsHTML += `<p><strong>Endpoints:</strong></p><ul>`;
-    item.endpoints.forEach((ep) => {
-      const isFhir = ep.type === "FHIR_BASE_URL" || safeLower(ep.url).includes("fhir");
-      detailsHTML += `<li style="${isFhir ? "font-weight: bold;" : ""}">${ep.url}${ep.name ? ` (${ep.name})` : ""}${ep.type ? ` [${ep.type}]` : ""}</li>`;
-    });
-    detailsHTML += `</ul>`;
-  } else {
-    detailsHTML += `<p><strong>Endpoints:</strong> None found</p>`;
-  }
+  addDetailRow(dl, "Location", hasCollapseInfo ? `Matched ${item._matchedCount} of ${item._totalCount} card${item._totalCount !== 1 ? "s" : ""}` : formatLocation(item));
+  const endpoint = item.endpoints?.[0]?.url;
+  addDetailRow(dl, "FHIR endpoint", endpoint || "None found", true);
+  brandModalDetails.appendChild(dl);
   const vc = item._vendorConfig;
   if (vc && vc.note) {
-    detailsHTML += `<p style="margin-top:0.8rem;"><em>Login Info:</em> ${vc.note}</p>`;
+    const note = document.createElement("p");
+    note.className = "brand-modal-note";
+    note.textContent = `Login info: ${vc.note}`;
+    brandModalDetails.appendChild(note);
   }
-  brandModalDetails.innerHTML = detailsHTML;
   brandModalBackdrop.classList.add("visible");
+  if (brandSelectorContainer) {
+    brandSelectorContainer.inert = true;
+    brandSelectorContainer.setAttribute("aria-hidden", "true");
+  }
+  brandModalCancel?.focus();
 }
 function hideBrandModal() {
   if (!brandModalBackdrop)
     return;
   brandModalBackdrop.classList.remove("visible");
   selectedBrandItem = null;
+  if (brandSelectorContainer) {
+    brandSelectorContainer.inert = false;
+    brandSelectorContainer.removeAttribute("aria-hidden");
+  }
+  lastFocusedTile?.focus();
+  lastFocusedTile = null;
+}
+function onModalKeydown(event) {
+  if (!brandModalBackdrop?.classList.contains("visible"))
+    return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    hideBrandModal();
+    return;
+  }
+  if (event.key !== "Tab" || !brandModal)
+    return;
+  const focusable = brandModal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (!focusable.length)
+    return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 async function initiateSmartAuth(fhirBaseUrl, vendorAuthConfig, vendorLabel = "vendor") {
   const defaultRedirectUri = window.location.origin + window.location.pathname;
@@ -12802,8 +12895,8 @@ async function fetchBrandsAndInitialize() {
   if (!brandInitialLoadingMessage || !brandResultsContainer || !brandSearchInput || !brandSearchSpinner || !brandPaginationControls) {
     console.error("[fetchBrands] Error: Required DOM elements not found!");
     if (brandInitialLoadingMessage) {
-      brandInitialLoadingMessage.textContent = "Initialization Error: UI elements missing.";
-      brandInitialLoadingMessage.style.color = "red";
+      brandInitialLoadingMessage.textContent = "Initialization error: page elements are missing.";
+      brandInitialLoadingMessage.classList.add("is-error");
     }
     return;
   }
@@ -12884,6 +12977,7 @@ async function fetchBrandsAndInitialize() {
       brandPrevBtn.addEventListener("click", () => {
         if (currentPage > 1) {
           currentPage--;
+          pendingPageFocus = true;
           renderCurrentPage();
         }
       });
@@ -12892,19 +12986,14 @@ async function fetchBrandsAndInitialize() {
         const totalPages = Math.ceil(currentFilteredItems.length / ITEMS_PER_PAGE);
         if (currentPage < totalPages) {
           currentPage++;
+          pendingPageFocus = true;
           renderCurrentPage();
         }
       });
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && brandModalBackdrop?.classList.contains("visible")) {
-        hideBrandModal();
-      }
-    });
   } catch (error) {
     console.error("[fetchBrands] Error:", error);
     if (brandInitialLoadingMessage) {
-      brandInitialLoadingMessage.textContent = `Error loading organizations: ${error.message}`;
-      brandInitialLoadingMessage.style.color = "red";
+      setResultStatus(`The organization directory could not be loaded: ${error.message} Reload the page to try again.`);
     }
     brandResultsContainer.style.display = "none";
     brandSearchInput.disabled = true;
@@ -12928,6 +13017,7 @@ document.addEventListener("DOMContentLoaded", () => {
   brandPrevBtn = document.getElementById("brand-prev-btn");
   brandNextBtn = document.getElementById("brand-next-btn");
   brandPageInfo = document.getElementById("brand-page-info");
+  document.addEventListener("keydown", onModalKeydown);
   statusContainer = document.getElementById("status-container");
   statusMessageElement = document.getElementById("status-message");
   progressContainer = document.getElementById("progress-container");
@@ -13041,15 +13131,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const attachmentCount = fetchedClientFullEhrObject?.attachments?.length || 0;
         let finalStatus = `Data fetched successfully! ${resourceTypeCount} resource types, ${totalResources} total resources, and ${attachmentCount} attachments retrieved.`;
         updateStatus(finalStatus);
-        finalStatus += `. You may download your data or close this window.`;
+        finalStatus += ` Your record is assembled in this browser and has not been sent anywhere.`;
         updateStatus(finalStatus);
         if (downloadDataBtn) {
-          downloadDataBtn.style.display = "inline-block";
+          downloadDataBtn.style.display = "inline-flex";
           downloadDataBtn.onclick = () => {
-            triggerJsonDownload(fetchedClientFullEhrObject, "ehr-data.json");
-            if (downloadDataBtn)
-              downloadDataBtn.disabled = true;
+            const stamp = new Date().toISOString().slice(0, 10);
+            triggerJsonDownload(fetchedClientFullEhrObject, `health-record-${stamp}.json`);
+            updateStatus(`Saved to your device as health-record-${stamp}.json. Protect this file — HIPAA does not cover it once it is yours.`);
           };
+          window.setTimeout(() => statusMessageElement?.focus(), 0);
         }
       } catch (err) {
         updateStatus(`Error during authorization or data processing: ${err.message}`, true);

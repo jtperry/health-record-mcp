@@ -1,151 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EHR Data Retriever</title>
-    <style>
-        /* Basic Reset & Defaults */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choose your health system</title>
+<!-- Fonts are not bundled with the CLI copy; the stacks below fall back cleanly. -->
+<style>
+  /* Tokens shared with the landing page. Every pairing below clears 4.5:1 on its
+     intended background; the muted greys are the ones to check first if they change. */
+  :root {
+    --paper:   #eef2f7;
+    --surface: #ffffff;
+    --callout: #e7eef6;
+    --ink:     #0d1b2a;
+    --body:    #223549;
+    --muted:   #33465b;
+    --faint:   #3f5265;
+    --line:    #ccd7e3;
+    --edge:    #7d94ab;
+    --accent:  #0b4f8a;
+    --accent-dark: #073a68;
+    --navy:    #17324d;
+    --navy-ink:#10283f;
+    --error:   #8a1c1c;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Public Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-            line-height: 1.6; background-color: #f4f7f6; color: #333; padding: 1rem;
-        }
+  html { -webkit-text-size-adjust: 100%; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); font-size: 17px; line-height: 1.6;
+  }
+  h1, h2, h3 { text-wrap: balance; }
+  p, li { text-wrap: pretty; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:hover { color: var(--accent-dark); text-decoration-thickness: 2px; }
 
-        /* App Layout */
-        .app-container {
-            max-width: 1200px; margin: 2rem auto; padding: 1rem; background-color: #fff;
-            border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        h1 { text-align: center; margin-bottom: 1.5rem; color: #2c3e50; }
+  /* Tiles are buttons now, so every interactive element needs a visible ring. */
+  a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+    outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 2px;
+  }
+  ::selection { background: #cfe0f0; }
 
-        /* Brand Selector Search Area */
-        .brand-controls-container { /* Keep wrapper for potential future controls */
-            margin-bottom: 2rem;
-        }
-        .brand-search-container {
-             position: relative; /* For spinner */
-        }
-        .brand-search-container label { /* Optional: Add label */
-             display: block; margin-bottom: 0.4rem; font-weight: bold;
-             font-size: 0.9rem; color: #555;
-        }
-        #brand-search-input {
-            width: 100%; padding: 0.75rem 1rem; font-size: 1rem; border: 1px solid #ccc;
-            border-radius: 6px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
-        }
-        #brand-search-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2); }
-        #brand-search-spinner {
-            position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px;
-            border: 3px solid rgba(0, 0, 0, 0.1); border-left-color: #3498db; border-radius: 50%;
-            animation: spin 1s linear infinite; display: none;
-         }
-        /* Adjust spinner position if label is added */
-        .brand-search-container label + #brand-search-input + #brand-search-spinner {
-             top: calc(50% + 10px); /* Approx vertical center relative to input */
-        }
-        @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+  .skip-link { position: absolute; left: -9999px; top: 0; }
+  .skip-link:focus {
+    left: 12px; top: 12px; z-index: 60; padding: 14px 20px;
+    background: var(--accent); color: #fff; font-size: 16px; font-weight: 600;
+    text-decoration: none; border-radius: 3px;
+  }
 
+  .pad { padding-left: 40px; padding-right: 40px; }
+  @media (max-width: 720px) { .pad { padding-left: 20px; padding-right: 20px; } }
 
-        /* Brand Selector Results Grid */
-        #brand-results-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem; min-height: 100px; }
-        .brand-tile { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.25rem; cursor: pointer; transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
-        .brand-tile:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .brand-tile h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: #3498db; word-break: break-word; }
-        .brand-tile p { font-size: 0.9rem; color: #555; margin-bottom: 0.3rem; word-break: break-word; }
-        .brand-tile .provider-info { font-style: italic; color: #777; font-size: 0.85rem; }
-        .brand-tile .location-info { font-weight: bold; color: #444; font-size: 0.85rem; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media (forced-colors: active) { .fc-border { border: 1px solid CanvasText !important; } }
 
-        /* Brand Selector Modal Styles */
-        .brand-modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s 0.3s linear; }
-        .brand-modal-backdrop.visible { opacity: 1; visibility: visible; transition: opacity 0.3s ease; }
-        .brand-modal { background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); max-width: 500px; width: 90%; transform: scale(0.9); transition: transform 0.3s ease; }
-        .brand-modal-backdrop.visible .brand-modal { transform: scale(1.0); }
-        .brand-modal h2 { margin-top: 0; margin-bottom: 1rem; color: #2c3e50; }
-        #brand-modal-details p { margin-bottom: 0.5rem; color: #333; } #brand-modal-details strong { color: #555; }
-        #brand-modal-details ul { list-style: none; padding-left: 0; margin-top: 0.5rem;} #brand-modal-details li { margin-bottom: 0.25rem; font-size: 0.9em; color: #444;}
-        .brand-modal-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem; }
-        .brand-modal-button { padding: 0.6rem 1.2rem; font-size: 0.95rem; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s ease; }
-        .brand-modal-button.connect { background-color: #2ecc71; color: white; } .brand-modal-button.connect:hover { background-color: #27ae60; }
-        .brand-modal-button.cancel { background-color: #e74c3c; color: white; } .brand-modal-button.cancel:hover { background-color: #c0392b; }
+  header.site {
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    padding-top: 14px; padding-bottom: 14px;
+    background: var(--paper); border-bottom: 1px solid var(--line);
+  }
+  .brandmark { display: flex; align-items: center; gap: 12px; }
+  .brandmark .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent); }
+  .brandmark .host {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  header.site a.back {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+    font-size: 15px; font-weight: 600;
+  }
 
-        /* Brand Utility */
-        .brand-status-message { grid-column: 1 / -1; text-align: center; color: #777; font-style: italic; padding: 2rem; }
-        #brand-initial-loading-message { text-align: center; padding: 2rem; color: #555; font-size: 1.1em; }
+  main { max-width: 920px; margin: 0 auto; padding-top: 48px; padding-bottom: 80px; }
 
-        /* Original EHR Retriever Styles (kept separate) */
-        /* body { font-family: sans-serif; padding: 1em; } */ /* Overlaps with brand styles, adjusted above */
-        label { display: block; margin-bottom: 0.5em; }
-        input[type="text"], input[type="url"] { width: 90%; max-width: 400px; padding: 0.5em; margin-bottom: 1em; box-sizing: border-box; }
-        button { padding: 0.8em 1.5em; cursor: pointer; }
-        #form-container, #status-container { margin-top: 1em; }
-        #status-container { border: 1px solid #ccc; padding: 1em; background-color: #f9f9f9; }
+  .steps ol { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; }
+  .steps li { display: flex; align-items: center; gap: 10px; padding: 8px 18px; border-bottom: 3px solid var(--line); }
+  .steps li:first-child { padding-left: 0; }
+  .steps li:last-child { padding-right: 0; }
+  .steps .num { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+  .steps .name { font-size: 15px; color: var(--muted); }
+  .steps li[aria-current="step"] { border-bottom-color: var(--accent); }
+  .steps li[aria-current="step"] .num { color: var(--accent); }
+  .steps li[aria-current="step"] .name { font-weight: 700; color: var(--accent); }
 
-    </style>
+  h1 { margin: 28px 0 18px; font-family: var(--serif); font-weight: 400; font-size: 44px; line-height: 1.1; letter-spacing: -.015em; }
+  .lede { margin: 0 0 32px; max-width: 34em; font-size: 18px; color: var(--body); }
+
+  .callout {
+    border-left: 4px solid var(--navy); background: var(--callout);
+    padding: 18px 22px; margin: 0 0 40px; border-radius: 0 3px 3px 0;
+  }
+  .callout .kicker {
+    margin: 0 0 6px; font-family: var(--mono); font-size: 11.5px;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--navy-ink);
+  }
+  .callout p.body { margin: 0; max-width: 44em; font-size: 16px; color: var(--navy-ink); }
+
+  h2 { margin: 0 0 16px; font-family: var(--serif); font-weight: 400; font-size: 26px; line-height: 1.25; }
+  label.field { display: block; margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+  .hint { margin: 0 0 10px; font-size: 15px; color: var(--muted); }
+
+  #brand-search-input {
+    width: 100%; max-width: 34em; min-height: 52px; padding: 0 16px;
+    font-family: var(--sans); font-size: 17px; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--edge); border-radius: 3px;
+  }
+  #brand-search-input:disabled { background: #f4f6f9; color: var(--muted); }
+
+  /* Purely decorative: #brand-initial-loading-message carries the same information
+     as text, which is why the spinner is hidden from assistive technology. */
+  #brand-search-spinner {
+    display: none; width: 18px; height: 18px; margin-top: 12px;
+    border: 2px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #brand-search-spinner { animation: none; } }
+
+  #brand-initial-loading-message { margin: 16px 0 0; font-size: 15.5px; color: var(--body); }
+  #brand-initial-loading-message.is-error {
+    color: var(--error); font-weight: 600;
+    border-left: 4px solid var(--error); padding-left: 12px;
+  }
+
+  #brand-results-container {
+    margin: 20px 0 0; padding: 0; list-style: none;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .brand-tile {
+    display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px 20px; align-items: start;
+    width: 100%; min-height: 76px; padding: 16px 20px; text-align: left;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+    cursor: pointer; font-family: var(--sans);
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .brand-tile:hover { background: #f4f8fc; border-color: var(--accent); }
+  .brand-tile-text { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .brand-tile-name { font-size: 17.5px; font-weight: 700; line-height: 1.35; color: var(--ink); overflow-wrap: anywhere; }
+  .brand-tile-provider { font-size: 15px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+  .brand-tile-location { font-size: 15px; line-height: 1.5; color: var(--faint); }
+  .brand-tile-kind {
+    display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px;
+    border: 1px solid var(--edge); border-radius: 2px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--navy-ink); white-space: nowrap;
+  }
+
+  #brand-pagination-controls {
+    display: none; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    gap: 16px; margin: 24px 0 0; padding-top: 20px; border-top: 1px solid var(--line);
+  }
+  #brand-page-info { margin: 0; font-family: var(--mono); font-size: 13.5px; color: var(--body); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 48px; min-width: 48px; padding: 0 20px;
+    font-family: var(--sans); font-size: 16px; font-weight: 600;
+    border-radius: 3px; cursor: pointer;
+  }
+  .btn-secondary { background: var(--surface); color: var(--accent); border: 2px solid var(--accent); }
+  .btn-primary { background: var(--accent); color: #fff; border: 2px solid var(--accent); }
+  .btn:disabled { opacity: .45; cursor: default; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+    padding: 26px 28px; margin: 24px 0 0;
+  }
+  .panel h2 { margin: 0 0 14px; font-family: var(--sans); font-size: 17px; font-weight: 700; }
+  #status-message { margin: 0 0 14px; font-size: 16.5px; color: var(--body); }
+  #status-message:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  #status-message.is-error {
+    color: var(--error); font-weight: 600;
+    border-left: 4px solid var(--error); padding-left: 12px;
+  }
+  #fetch-progress { width: min(100%, 420px); height: 14px; accent-color: var(--accent); }
+  #progress-text { font-family: var(--mono); font-size: 13.5px; color: var(--body); }
+  .progress-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+  footer.site { border-top: 1px solid var(--line); background: var(--callout); padding-top: 40px; padding-bottom: 40px; }
+  footer.site .inner {
+    max-width: 920px; margin: 0 auto; display: flex; flex-wrap: wrap;
+    gap: 20px; justify-content: space-between; align-items: baseline;
+  }
+  footer.site p { margin: 0; font-size: 15.5px; color: var(--muted); max-width: 44em; }
+  footer.site .who { font-family: var(--mono); font-size: 12.5px; color: var(--faint); }
+
+  #brand-modal-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 80;
+    background: rgba(13,27,42,.6); align-items: center; justify-content: center; padding: 24px;
+  }
+  #brand-modal-backdrop.visible { display: flex; }
+  #brand-modal {
+    width: min(560px, 100%); max-height: 90vh; overflow: auto;
+    background: var(--surface); border: 2px solid var(--navy); border-radius: 4px;
+  }
+  #brand-modal .head { padding: 22px 26px; background: var(--navy); }
+  #brand-modal-title { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 24px; line-height: 1.25; color: #fff; }
+  #brand-modal .content { padding: 26px; }
+  .brand-modal-org { margin: 0 0 18px; font-size: 19px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+  #brand-modal-details dl {
+    margin: 0 0 22px; display: grid; grid-template-columns: auto minmax(0,1fr);
+    gap: 8px 18px; font-size: 15.5px; line-height: 1.5;
+  }
+  #brand-modal-details dt { color: var(--faint); }
+  #brand-modal-details dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+  #brand-modal-details dd.is-mono { font-family: var(--mono); font-size: 13px; color: var(--body); }
+  .brand-modal-note { margin: 0; font-size: 15px; color: var(--muted); }
+  #brand-modal-consequence {
+    margin: 0 0 24px; padding: 16px 18px; background: var(--callout);
+    border-left: 4px solid var(--navy); border-radius: 0 3px 3px 0;
+    font-size: 16px; color: var(--navy-ink);
+  }
+  .brand-modal-actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: flex-end; }
+</style>
 </head>
 <body>
-    <div class="app-container">
-        <h1>Connect to your record</h1>
+<a class="skip-link" href="#main">Skip to main content</a>
 
-        <!-- ===== BRAND SELECTOR UI ===== -->
-        <div id="brand-selector-container">
-            <div id="brand-initial-loading-message">Loading organizations data...</div>
-            <div class="brand-controls-container" id="brand-controls-container">
-                <div class="brand-search-container">
-                     <!-- <label for="brand-search-input">Search Organizations</label> -->
-                     <input autofocus type="search" id="brand-search-input" placeholder="Search by name, provider, city, state, zip..." disabled>
-                     <div id="brand-search-spinner"></div>
-                 </div>
-             </div>
-            <div id="brand-results-container" style="display: none;"> <!-- Initially hidden -->
-                <!-- Results populated by JS -->
-            </div>
+<main id="main" class="pad">
 
-            <!-- ===== Pagination Controls ===== -->
-            <div id="brand-pagination-controls" style="display: none; margin-top: 1.5rem; text-align: center;">
-                <button id="brand-prev-btn" disabled>&laquo; Previous</button>
-                <span id="brand-page-info" style="margin: 0 1rem; display: inline-block; min-width: 80px;">Page 1 of 1</span>
-                <button id="brand-next-btn" disabled>Next &raquo;</button>
-            </div>
-            <!-- =============================== -->
+  <nav class="steps" aria-label="Progress">
+    <ol>
+      <li aria-current="step"><span class="num">01</span><span class="name">Choose your health system</span></li>
+      <li><span class="num">02</span><span class="name">Sign in with them</span></li>
+      <li><span class="num">03</span><span class="name">Download your record</span></li>
+    </ol>
+  </nav>
 
-        </div>
-        <!-- ===== END BRAND SELECTOR UI ===== -->
+  <h1>Choose your health system</h1>
+  <p class="lede">Search by organization name, city, state, or ZIP code. Pick the health system that holds your record &mdash; you will sign in on their own site, not here.</p>
 
-        <!-- Bundled script will be included here -->
-        <script src="./dist/ehretriever.bundle.js"></script>
+  <div class="callout fc-border">
+    <p class="kicker">Reminder</p>
+    <p class="body">Your record will be written to <strong>this device</strong>, and HIPAA protections do not follow it there. Be sure you want that before continuing.</p>
+  </div>
 
-        <!-- Status/Progress containers remain unchanged -->
-        <div id="status-container" style="display: none;">
-            <h2>Status</h2>
-            <p id="status-message">Loading...</p>
-            <!-- NEW Download Button -->
-            <button id="download-data-btn" style="display: none; margin-left: 1em; padding: 0.6em 1.1em;">Download Data (JSON)</button>
-        </div>
+  <!-- ===== BRAND SELECTOR UI ===== -->
+  <div id="brand-selector-container">
+    <section aria-labelledby="search-h">
+      <h2 id="search-h">Search organizations</h2>
 
-        <div id="progress-container" style="display: none; margin-top: 1em;">
-            <h3>Fetch Progress</h3>
-            <progress id="fetch-progress" max="100" value="0" style="width: 90%; max-width: 400px;"></progress>
-            <span id="progress-text" style="margin-left: 10px;">(0/0)</span>
-        </div>
+      <label class="field" for="brand-search-input">Organization, city, state, or ZIP</label>
+      <p class="hint" id="brand-search-hint">Most organizations list no city, so searching by name or state usually works best.</p>
+      <input id="brand-search-input" type="search" autocomplete="off"
+             aria-describedby="brand-search-hint"
+             placeholder="e.g. Johns Hopkins, Tampa, MD, 20646" disabled>
+      <div id="brand-search-spinner" aria-hidden="true"></div>
 
-        </div>
+      <p id="brand-initial-loading-message" role="status">Loading the organization directory&hellip;</p>
+    </section>
 
-    </div> <!-- End app-container -->
+    <ul id="brand-results-container" style="display: none;">
+      <!-- Rows built by ehretriever.ts as <li><button class="brand-tile"> -->
+    </ul>
 
-    <!-- Brand Selector Modal Structure -->
-    <div id="brand-modal-backdrop" class="brand-modal-backdrop">
-        <div id="brand-modal" class="brand-modal">
-            <h2 id="brand-modal-title">Confirm Selection</h2>
-            <div id="brand-modal-details"></div>
-            <div class="brand-modal-actions">
-                <button id="brand-modal-cancel" class="brand-modal-button cancel">Cancel</button>
-                <button id="brand-modal-connect" class="brand-modal-button connect">Connect</button>
-            </div>
-        </div>
+    <nav id="brand-pagination-controls" aria-label="Search result pages">
+      <button type="button" id="brand-prev-btn" class="btn btn-secondary" disabled>&larr; Previous</button>
+      <p id="brand-page-info" aria-live="polite"></p>
+      <button type="button" id="brand-next-btn" class="btn btn-secondary" disabled>Next &rarr;</button>
+    </nav>
+  </div>
+  <!-- ===== END BRAND SELECTOR UI ===== -->
+
+  <div class="panel" id="status-container" style="display: none;">
+    <h2>Status</h2>
+    <p id="status-message" role="status" tabindex="-1">Loading&hellip;</p>
+    <button type="button" id="download-data-btn" class="btn btn-primary" style="display: none;">Save my record (JSON)</button>
+  </div>
+
+  <div class="panel" id="progress-container" style="display: none;">
+    <h2 id="progress-h">Resources retrieved</h2>
+    <div class="progress-row">
+      <progress id="fetch-progress" max="100" value="0" aria-labelledby="progress-h">0%</progress>
+      <span id="progress-text" aria-live="polite">0 of 0</span>
     </div>
+  </div>
 
+  <!-- Delivery was removed; this only ever stays hidden. See plan 9.4. -->
+  <div id="confirmation-container" style="display: none;"></div>
+</main>
 
+<div id="brand-modal-backdrop">
+  <div id="brand-modal" class="fc-border" role="dialog" aria-modal="true"
+       aria-labelledby="brand-modal-title" aria-describedby="brand-modal-consequence">
+    <div class="head">
+      <h2 id="brand-modal-title">Confirm your health system</h2>
+    </div>
+    <div class="content">
+      <div id="brand-modal-details"></div>
+      <p id="brand-modal-consequence">Continuing sends you to this organization&rsquo;s own sign-in page. Your username and password are never seen by this site. When you return, your record is retrieved straight to this device.</p>
+      <div class="brand-modal-actions">
+        <button type="button" id="brand-modal-cancel" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="brand-modal-connect" class="btn btn-primary">Continue to sign-in</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="./dist/ehretriever.bundle.js"></script>
 </body>
-</html> 
+</html>
