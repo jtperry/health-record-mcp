@@ -7,16 +7,5 @@
       "launch/patient",
       "offline_access"
     ]
-  },
-  "deliveryEndpoints": {
-    "mcp-callback": {
-      "postUrl": "http://localhost:3000/ehr-retriever-callback"
-    },
-    "local-server": {
-      "postUrl": "http://localhost:8080/data-sink"
-    },
-    "prod-server": {
-      "postUrl": "https://example.com/api/receive-ehr"
-    }
   }
-} 
+}

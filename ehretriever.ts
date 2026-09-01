@@ -5,7 +5,6 @@ import { fetchAllEhrDataClientSideParallel } from './clientFhirUtils'; // UPDATE
 declare const __CONFIG_FHIR_BASE_URL__: string | undefined;
 declare const __CONFIG_CLIENT_ID__: string | undefined;
 declare const __CONFIG_SCOPES__: string | undefined;
-declare const __DELIVERY_ENDPOINTS__: Record<string, { postUrl: string}> | undefined;
 // NEW BRAND INDEX CONSTANT (injected at build time)
 // Structure: Array of { url: string; tags: string[]; vendorConfig: { clientId: string; scopes: string; redirectUrl?: string } }
 declare const __BRAND_FILE_INDEX__: { url: string; tags: string[]; vendorConfig: { clientId: string; scopes: string; redirectUrl?: string } }[] | undefined;
@@ -13,9 +12,6 @@ declare const __BRAND_FILE_INDEX__: { url: string; tags: string[]; vendorConfig:
 
 // Keys for sessionStorage
 const AUTH_STORAGE_KEY = 'smart_auth_state';
-const DELIVERY_TARGET_KEY = 'delivery_target_name';
-const OPENER_TARGET_VALUE = '__opener__'; // Special value for opener target
-const OPENER_TARGET_ORIGIN_KEY = 'opener_target_origin'; // NEW: Key for storing opener's origin
 
 interface StoredAuthState {
     codeVerifier: string;
@@ -51,11 +47,6 @@ let progressContainer: HTMLElement | null;
 let progressBar: HTMLProgressElement | null;
 let progressText: HTMLElement | null;
 
-// NEW: Inline Confirmation UI Elements
-let confirmationContainer: HTMLElement | null;
-let confirmationMessageElement: HTMLElement | null;
-let confirmSendBtn: HTMLButtonElement | null;
-let cancelSendBtn: HTMLButtonElement | null;
 
 // NEW: Download Button Element
 let downloadDataBtn: HTMLButtonElement | null;
@@ -107,10 +98,12 @@ function showProgressContainer(show: boolean) {
     if (progressContainer) progressContainer.style.display = show ? 'block' : 'none';
 }
 
-// NEW: Helper function to show/hide confirmation UI
+// The confirmation UI existed only to approve sending the record to another origin.
+// With delivery removed there is nothing to confirm, so this only ever hides it -
+// kept so a stale cached page cannot leave the panel visible.
 function showConfirmationContainer(show: boolean) {
     const confirmationContainer = document.getElementById('confirmation-container');
-    if (confirmationContainer) confirmationContainer.style.display = show ? 'block' : 'none';
+    if (confirmationContainer) confirmationContainer.style.display = 'none';
 }
 
 // Helper function to update progress UI
@@ -133,11 +126,6 @@ function updateProgress(completed: number, total: number, message?: string) {
         }
     }
 
-    // --- NEW: Get Confirmation UI References ---
-    confirmationContainer = document.getElementById('confirmation-container');
-    confirmationMessageElement = document.getElementById('confirmation-message');
-    confirmSendBtn = document.getElementById('confirm-send-btn') as HTMLButtonElement | null;
-    cancelSendBtn = document.getElementById('cancel-send-btn') as HTMLButtonElement | null;
     // -----------------------------------------
 }
 
@@ -579,7 +567,6 @@ async function initiateSmartAuth(fhirBaseUrl: string, vendorAuthConfig: VendorAu
         // Show brand selector again on error?
         if (brandSelectorContainer) brandSelectorContainer.style.display = 'block';
         sessionStorage.removeItem(AUTH_STORAGE_KEY);
-        sessionStorage.removeItem(DELIVERY_TARGET_KEY);
     }
 }
 
@@ -918,8 +905,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     showProgressContainer(false);
                     // Clear sensitive state if not already cleared
                     sessionStorage.removeItem(AUTH_STORAGE_KEY);
-                    sessionStorage.removeItem(DELIVERY_TARGET_KEY);
-                    sessionStorage.removeItem(OPENER_TARGET_ORIGIN_KEY);
                     return; // Stop execution here
                 }
 
@@ -949,212 +934,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 let finalStatus = `Data fetched successfully! ${resourceTypeCount} resource types, ${totalResources} total resources, and ${attachmentCount} attachments retrieved.`;
                 updateStatus(finalStatus); // Update status initially
 
-                // --- 5. Check for and perform delivery ---
-                console.log("Proceeding to delivery check...");
-                console.log('[Delivery Check] Checking sessionStorage for key:', DELIVERY_TARGET_KEY);
-                const deliveryTargetName = sessionStorage.getItem(DELIVERY_TARGET_KEY);
-                const openerTargetOrigin = sessionStorage.getItem(OPENER_TARGET_ORIGIN_KEY); // Get opener origin
-                console.log('[Delivery Check] Value found in sessionStorage (Target Name):', deliveryTargetName);
-                console.log('[Delivery Check] Value found in sessionStorage (Opener Origin):', openerTargetOrigin); // Log opener origin
-
-                // Ensure confirmation/download UI is hidden initially before potential delivery
-                showConfirmationContainer(false);
-                if (downloadDataBtn) downloadDataBtn.style.display = 'none'; // Hide download button initially
-
-                if (deliveryTargetName) {
-                    console.log(`[Delivery Check] Delivery target found: ${deliveryTargetName}. Comparing with OPENER_TARGET_VALUE:`, OPENER_TARGET_VALUE);
-
-                    // --- Handle postMessage to opener ---
-                    if (deliveryTargetName === OPENER_TARGET_VALUE) {
-                        console.log('[Delivery Check] Target is opener. Preparing inline confirmation...');
-
-                        if (openerTargetOrigin) {
-                            // *** SHOW INLINE CONFIRMATION ***
-                            updateStatus('Data fetched. Waiting for confirmation to send...');
-                            console.log(`Preparing confirmation UI to send data to: ${openerTargetOrigin}`);
-
-                            // Update the confirmation message text
-                            if (confirmationMessageElement) {
-                                confirmationMessageElement.textContent = `You have successfully fetched your EHR data. Do you want to send this data back to the application at origin "${openerTargetOrigin}"?`;
-                            }
-
-                            // Hide status/progress, show confirmation
-                            showStatusContainer(false);
-                            showProgressContainer(false);
-                            showConfirmationContainer(true);
-
-                            // Define button handlers
-                            if (confirmSendBtn && cancelSendBtn) {
-                                confirmSendBtn.onclick = () => {
-                                    console.log('User confirmed data delivery via inline button.');
-                                    if (confirmSendBtn) confirmSendBtn.disabled = true;
-                                    if (cancelSendBtn) cancelSendBtn.disabled = true;
-                                    showConfirmationContainer(false);
-                                    showStatusContainer(true);
-                                    updateStatus('Confirmed. Sending data...');
-
-                                    try {
-                                        updateStatus(`${finalStatus} Delivering data via postMessage to ${openerTargetOrigin}...`);
-                                        window.opener.postMessage(fetchedClientFullEhrObject, openerTargetOrigin); // Use fetched data
-                                        finalStatus += ` Data successfully SENT via postMessage call to ${openerTargetOrigin}.`;
-                                        updateStatus(finalStatus);
-                                        console.log(`Successfully CALLED postMessage targeting ${openerTargetOrigin}.`);
-                                        sessionStorage.removeItem(DELIVERY_TARGET_KEY);
-                                        sessionStorage.removeItem(OPENER_TARGET_ORIGIN_KEY);
-                                    } catch (postMessageError: any) {
-                                        finalStatus += ` Delivery via postMessage CALL FAILED: ${postMessageError.message}`;
-                                        updateStatus(finalStatus, true);
-                                        console.error(`Failed to CALL postMessage to ${openerTargetOrigin}:`, postMessageError);
-                                    } finally {
-                                        console.log('Attempting to close retriever window after confirmed postMessage attempt.');
-                                        setTimeout(() => window.close(), 500);
-                                    }
-                                };
-
-                                cancelSendBtn.onclick = () => {
-                                    console.log('User cancelled data delivery via inline button.');
-                                    if (confirmSendBtn) confirmSendBtn.disabled = true;
-                                    if (cancelSendBtn) cancelSendBtn.disabled = true;
-                                    showConfirmationContainer(false);
-                                    showStatusContainer(true);
-                                    finalStatus = 'Delivery cancelled by user. You may now close this window.';
-                                    updateStatus(finalStatus);
-                                    // *** SHOW DOWNLOAD BUTTON ON CANCEL ***
-                                    if (downloadDataBtn) {
-                                        downloadDataBtn.style.display = 'inline-block';
-                                        downloadDataBtn.onclick = () => {
-                                            triggerJsonDownload(fetchedClientFullEhrObject, 'ehr-data-cancelled-delivery.json');
-                                            if(downloadDataBtn) downloadDataBtn.disabled = true; // Disable after click
-                                        };
-                                    }
-                                    sessionStorage.removeItem(DELIVERY_TARGET_KEY);
-                                    sessionStorage.removeItem(OPENER_TARGET_ORIGIN_KEY);
-                                    console.log('Closing retriever window after cancellation.');
-                                    // Don't close automatically if download is offered
-                                    // setTimeout(() => window.close(), 500);
-                                };
-                            } else { // Buttons not found
-                                console.error("Confirmation buttons not found!");
-                                updateStatus("Error: Confirmation UI elements missing. Cannot proceed.", true);
-                                showConfirmationContainer(false);
-                                showStatusContainer(true);
-                                console.log('Attempting to close retriever window due to missing UI elements.');
-                                setTimeout(() => window.close(), 500);
-                            }
-
-                        } else { // Opener origin missing
-                            finalStatus += ` Delivery via postMessage FAILED: Opener's target origin not found in session storage. Cannot target postMessage. You may download your data below.`;
-                            updateStatus(finalStatus, true);
-                            // *** SHOW DOWNLOAD BUTTON ON MISSING ORIGIN ***
-                            if (downloadDataBtn) {
-                                downloadDataBtn.style.display = 'inline-block';
-                                downloadDataBtn.onclick = () => {
-                                    triggerJsonDownload(fetchedClientFullEhrObject, 'ehr-data-missing-origin.json');
-                                     if(downloadDataBtn) downloadDataBtn.disabled = true; // Disable after click
-                                };
-                            }
-                            console.error("Cannot postMessage to opener: Target origin missing from session storage.");
-                            // Don't close automatically if download is offered
-                            // console.log('Attempting to close retriever window after failed opener delivery (missing origin).');
-                            // setTimeout(() => window.close(), 500);
-                        }
-                    }
-                    // --- Handle named endpoint delivery ---
-                    else {
-                        let deliveryEndpoints: Record<string, { postUrl: string }> = {};
-                        deliveryEndpoints = __DELIVERY_ENDPOINTS__ || {}
-                        const endpointConfig = deliveryEndpoints[deliveryTargetName];
-
-                        if (endpointConfig && endpointConfig.postUrl) {
-                            const postUrl = makeAbsoluteUrl(endpointConfig.postUrl);
-                            updateStatus(`${finalStatus} Delivering data to ${deliveryTargetName} at ${postUrl}...`);
-                            try {
-                                const deliveryResponse = await fetch(postUrl, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(fetchedClientFullEhrObject) // Use fetched data
-                                });
-
-                                if (!deliveryResponse.ok) {
-                                    const errorBody = await deliveryResponse.text();
-                                    throw new Error(`Delivery POST failed (${deliveryResponse.status}): ${errorBody}`);
-                                }
-                                console.log(`Successfully POSTed data to ${deliveryTargetName} (${postUrl})`);
-                                sessionStorage.removeItem(DELIVERY_TARGET_KEY);
-
-                                try {
-                                    const jsonData = await deliveryResponse.json();
-                                    console.log("JSON response from delivery endpoint:", jsonData);
-                                    if (jsonData.success === true && typeof jsonData.redirectTo === 'string' && jsonData.redirectTo) {
-                                        updateStatus(`${finalStatus} Data POST successful. Redirecting to complete flow...`);
-                                        console.log(`Redirecting to: ${jsonData.redirectTo}`);
-                                        window.location.href = jsonData.redirectTo;
-                                        return; // Stop execution after redirect
-                                    } else if (jsonData.success === true && !jsonData.redirectTo) {
-                                        // *** SUCCESSFUL POST, NO REDIRECT -> SHOW DOWNLOAD ***
-                                        finalStatus = `Data fetched and POST successful. No redirect specified. You may download your data or close this window.`;
-                                        updateStatus(finalStatus);
-                                        if (downloadDataBtn) {
-                                            downloadDataBtn.style.display = 'inline-block';
-                                            downloadDataBtn.onclick = () => {
-                                                 triggerJsonDownload(fetchedClientFullEhrObject, `ehr-data-${deliveryTargetName}.json`);
-                                                  if(downloadDataBtn) downloadDataBtn.disabled = true; // Disable after click
-                                            };
-                                        }
-                                        console.log('Delivery successful, no redirect specified, download offered.');
-                                    } else {
-                                        const serverError = jsonData.error || 'unknown_server_error';
-                                        const serverErrorDesc = jsonData.error_description || 'Server did not provide redirect URL or indicated failure.';
-                                        throw new Error(`Server Error (${serverError}): ${serverErrorDesc}`);
-                                    }
-                                } catch (parseError) {
-                                    console.error("Failed to parse JSON response from delivery endpoint:", parseError);
-                                    throw new Error("Received malformed response from the delivery server.");
-                                }
-
-                            } catch (deliveryError: any) {
-                                // *** DELIVERY POST FAILED -> SHOW DOWNLOAD ***
-                                console.error(`Failed to POST or process response for ${deliveryTargetName}:`, deliveryError);
-                                finalStatus += ` Delivery to ${deliveryTargetName} FAILED: ${deliveryError.message || 'Unknown delivery error'}. You may download your data below.`;
-                                updateStatus(finalStatus, true);
-                                if (downloadDataBtn) {
-                                    downloadDataBtn.style.display = 'inline-block';
-                                    downloadDataBtn.onclick = () => {
-                                        triggerJsonDownload(fetchedClientFullEhrObject, 'ehr-data-delivery-failed.json');
-                                         if(downloadDataBtn) downloadDataBtn.disabled = true; // Disable after click
-                                    };
-                                }
-                            }
-
-                        } else {
-                            // *** INVALID DELIVERY TARGET CONFIG -> SHOW DOWNLOAD ***
-                            finalStatus += ` Delivery target '${deliveryTargetName}' configuration invalid or incomplete (missing postUrl). You may download your data below.`;
-                            updateStatus(finalStatus, true);
-                            if (downloadDataBtn) {
-                                downloadDataBtn.style.display = 'inline-block';
-                                downloadDataBtn.onclick = () => {
-                                    triggerJsonDownload(fetchedClientFullEhrObject, 'ehr-data-invalid-config.json');
-                                     if(downloadDataBtn) downloadDataBtn.disabled = true; // Disable after click
-                                };
-                            }
-                            console.error(`Delivery target '${deliveryTargetName}' requested but configuration is invalid in __DELIVERY_ENDPOINTS__.`);
-                            sessionStorage.removeItem(DELIVERY_TARGET_KEY);
-                        }
-                    }
-                } else {
-                    // *** NO DELIVERY TARGET -> SHOW DOWNLOAD ***
-                    console.log('No delivery target specified in session storage.');
-                    finalStatus += `. No delivery target specified. You may download your data or close this window.`;
-                    updateStatus(finalStatus);
-                     if (downloadDataBtn) {
-                        downloadDataBtn.style.display = 'inline-block';
-                        downloadDataBtn.onclick = () => {
-                            triggerJsonDownload(fetchedClientFullEhrObject, 'ehr-data.json');
-                             if(downloadDataBtn) downloadDataBtn.disabled = true; // Disable after click
-                        };
-                    }
+                // --- 5. Offer the download ---
+                //
+                // The retrieved record is handed to the user and nowhere else. There is
+                // deliberately no delivery mechanism here: an earlier version could POST the
+                // record to a configured endpoint, or postMessage it to an arbitrary origin
+                // named in the URL hash. The latter never checked that origin against the
+                // actual opener, so any site could open this page with its own origin in the
+                // hash and receive a complete medical record, using this app's registered
+                // client id to obtain it. See docs/health.circlejtp.me-plan.md 9.4.
+                finalStatus += `. You may download your data or close this window.`;
+                updateStatus(finalStatus);
+                if (downloadDataBtn) {
+                    downloadDataBtn.style.display = 'inline-block';
+                    downloadDataBtn.onclick = () => {
+                        triggerJsonDownload(fetchedClientFullEhrObject, 'ehr-data.json');
+                        if (downloadDataBtn) downloadDataBtn.disabled = true;
+                    };
                 }
-                // --- End Delivery ---
 
             } catch (err: any) {
                 // Catch errors during token exchange or *outer* fetch block (like JSON parsing of token)
@@ -1167,8 +964,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (downloadDataBtn) downloadDataBtn.style.display = 'none'; // Ensure download not shown on these errors
                 // Clear state even on error during these steps
                 sessionStorage.removeItem(AUTH_STORAGE_KEY);
-                sessionStorage.removeItem(DELIVERY_TARGET_KEY);
-                sessionStorage.removeItem(OPENER_TARGET_ORIGIN_KEY);
             }
         })(); // Immediately invoke the async function
 
@@ -1183,42 +978,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Fetch brand data and initialize the selector UI
         fetchBrandsAndInitialize().then(() => {
-            // Check for delivery target in hash (keep this logic)
-            const hash = window.location.hash;
-            sessionStorage.removeItem(DELIVERY_TARGET_KEY); // Clear any previous target first
-            sessionStorage.removeItem(OPENER_TARGET_ORIGIN_KEY); // Clear previous origin too
-            if (hash) {
-                const openerPrefix = '#deliver-to-opener:';
-                if (hash.startsWith(openerPrefix)) {
-                    const targetOrigin = hash.substring(openerPrefix.length);
-                    if (targetOrigin) {
-                        // Validate if it looks like an origin (basic check)
-                        try {
-                            new URL(targetOrigin); // Check if it parses as a URL
-                            sessionStorage.setItem(DELIVERY_TARGET_KEY, OPENER_TARGET_VALUE);
-                            sessionStorage.setItem(OPENER_TARGET_ORIGIN_KEY, targetOrigin);
-                            console.log(`Found and stored delivery target: Opener Window`);
-                            console.log(`Stored opener target origin: ${targetOrigin}`);
-                            history.replaceState(null, '', ' '); // Clear hash
-                        } catch (e) {
-                            console.warn(`Invalid target origin provided in hash: ${targetOrigin}`);
-                        }
-                    } else {
-                        console.warn('Found #deliver-to-opener: but target origin is empty.');
-                    }
-                } else if (hash.startsWith('#deliver-to:')) {
-                    const targetName = hash.substring('#deliver-to:'.length);
-                    if (targetName) {
-                        sessionStorage.setItem(DELIVERY_TARGET_KEY, targetName);
-                        console.log(`Found and stored delivery target: ${targetName}`);
-                        history.replaceState(null, '', ' '); // Clear hash
-                    } else {
-                        console.warn('Found #deliver-to: but target name is empty.');
-                    }
-                }
-
-
-            }
+            // The delivery-target hashes (#deliver-to: and #deliver-to-opener:) were
+            // removed; see the note at the download step. Any such hash is ignored.
         })
 
 

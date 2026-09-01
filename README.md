@@ -154,19 +154,23 @@ This project includes a self-contained web application that allows users to conn
     button that cannot work. There is no timeline for opening it.
 
     Upstream also publishes a hosted client at
-    [`https://mcp.fhir.me/ehr-connect`](https://mcp.fhir.me/ehr-connect), which is a separate
-    deployment run by Josh, not by us. Both are pure browser clients, and the notes below apply
-    to either.
-*   **Getting your data out — two options:**
-    1.  **Download a JSON file (simplest).** Open the hosted URL *with no hash*. With no delivery
-        target set, the client shows a **Download** button once the fetch completes, saving the
-        `ClientFullEHR` object as JSON. You can then load it into a local database with
-        `--import-json` (see section 2).
-    2.  **Deliver to your own page.** Append `#deliver-to-opener:$origin`, where **`$origin` is the
-        origin of *your* page** — the one that called `window.open()` on this link (e.g.
-        `http://localhost:3000`). After you confirm, the client calls
-        `window.opener.postMessage(clientFullEhr, $origin)`. Your page must be served over http(s):
-        a `file://` page has origin `"null"`, which fails validation and silently disables delivery.
+    [`https://mcp.fhir.me/ehr-connect`](https://mcp.fhir.me/ehr-connect), a separate deployment
+    run by Josh, not by us. Both are pure browser clients, but they are no longer the same
+    application — see the note on delivery below.
+*   **Getting your data out:** with the fetch complete, the client shows a **Download** button
+    that saves the `ClientFullEHR` object as JSON to your device. You can then load it into a
+    local database with `--import-json` (see section 2). That is the only way data leaves the
+    page.
+
+    **Removed: delivery to another origin.** Upstream can also POST the record to a configured
+    endpoint, or `postMessage` it to an origin named in the URL hash
+    (`#deliver-to-opener:$origin`). Both are gone from this fork. The postMessage path never
+    checked the named origin against the actual opener, so any website could open the retriever
+    with its own origin in the hash and receive a complete medical record — obtained under this
+    application's registered client id, with the patient seeing only their health system's
+    normal consent screen. That is a data flow this deployment does not describe and does not
+    want. Downloading a file is the whole feature.
+
 *   **Privacy note:** this page is a pure browser client (SMART public client + PKCE). It exchanges
     the auth code directly with your health system's token endpoint and fetches FHIR resources
     straight from the EHR. In the download flow above there is no POST anywhere — the site
@@ -183,7 +187,7 @@ This project includes a self-contained web application that allows users to conn
 *   **Data Output (`ClientFullEHR`):** Once fetching is complete, the client gathers all the data into a `ClientFullEHR` JSON object. This object contains:
     *   `fhir`: A dictionary where keys are FHIR resource types (e.g., "Patient") and values are arrays of the corresponding FHIR resources.
     *   `attachments`: An array of processed attachment objects, each including metadata (source resource, path, content type) and the content itself (`contentBase64` for raw data, `contentPlaintext` for extracted text).
-*   **Data Delivery:** If opened with the `#deliver-to-opener:$origin` hash, the client will prompt the user for confirmation and then send the `ClientFullEHR` object back to the window that opened it using `window.opener.postMessage(data, targetOrigin)`.
+*   **Data Delivery:** none. The `ClientFullEHR` object is offered to the user as a download and goes nowhere else. Upstream's `#deliver-to:` and `#deliver-to-opener:` hashes are not implemented in this fork; such hashes are ignored.
 
 ### 2. Local MCP Server via Stdio (`src/cli.ts`)
 
@@ -239,7 +243,7 @@ This mode is ideal for running the MCP server locally, often used with tools lik
     would otherwise double-count.
 
 *   **Two-Step Process:**
-    1.  **Fetch Data to Database:** First, run the command-line interface with the `--create-db` and `--db` flags. This starts a temporary web server and uses the same SMART on FHIR web client logic described above to fetch data. Instead of sending the data via `postMessage`, it saves the `ClientFullEHR` data into a local SQLite database file.
+    1.  **Fetch Data to Database:** First, run the command-line interface with the `--create-db` and `--db` flags. This starts a temporary web server and uses the same SMART on FHIR web client logic described above to fetch data. It saves the `ClientFullEHR` data into a local SQLite database file.
         ```bash
         # Example: Fetch data and save to data/my_record.sqlite
         bun run src/cli.ts --create-db --db ./data/my_record.sqlite

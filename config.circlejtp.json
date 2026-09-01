@@ -1,11 +1,13 @@
 {
   "_comment": "Build config for health.circlejtp.me. Scopes are SMART v1 (patient/*.read) to match the app registration; patient/*.rs elsewhere in this repo is SMART v2 syntax and will not work here.",
   "retrieverConfig": {
-    "deliveryEndpoints": {},
     "brandFiles": [
       {
         "url": "/brands/epic.json",
-        "tags": ["epic", "prod"],
+        "tags": [
+          "epic",
+          "prod"
+        ],
         "vendorConfig": {
           "clientId": "0eb38377-086f-4850-98b3-db0bac91e332",
           "scopes": "patient/*.read",
@@ -14,7 +16,10 @@
       },
       {
         "url": "/brands/epic-sandbox.json",
-        "tags": ["epic", "sandbox"],
+        "tags": [
+          "epic",
+          "sandbox"
+        ],
         "vendorConfig": {
           "clientId": "8d804225-8ca7-430b-99f1-2b7762258e09",
           "scopes": "patient/*.read",
