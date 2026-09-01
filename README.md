@@ -3,8 +3,13 @@
 Tools for assembling a **personal longitudinal medical record** from more than one health
 system, and serving it to an LLM over the Model Context Protocol.
 
-A record is retrieved in the browser over SMART on FHIR, stored in local SQLite, and queried
-through MCP tools. The record stays on your machine.
+A record is retrieved in the browser over SMART on FHIR — or imported from a C-CDA export where
+a provider offers no usable FHIR API — stored in local SQLite keyed by which health system it
+came from, and queried through MCP tools. The record stays on your machine: no server we run
+ever receives it.
+
+Hosted at **[health.circlejtp.me](https://health.circlejtp.me)**, where the connect flow is not
+yet open to the public — see [below](#1-standalone-smart-on-fhir-web-client).
 
 ## Built on jmandel/health-record-mcp
 
@@ -137,8 +142,21 @@ This project offers different ways to fetch EHR data and expose it via MCP tools
 
 This project includes a self-contained web application that allows users to connect to their EHR via SMART on FHIR and fetch their data.
 
-*   **Hosted Version:** You can use a publicly hosted version at: \
-    [`https://mcp.fhir.me/ehr-connect`](https://mcp.fhir.me/ehr-connect)
+*   **Our hosted version:** [`https://health.circlejtp.me`](https://health.circlejtp.me)
+
+    This is the deployment this repository builds, and it differs from upstream's. It leads with
+    a warning about what you are taking on by downloading your own record, gates the connect
+    button behind acknowledging it, strives to meet WCAG 2.2 AA, and refreshes the Epic brand
+    directory weekly so providers that move endpoints do not silently vanish from the list.
+
+    **The connect flow is not open to the public yet.** The Epic app registration has not been
+    approved for production, and until it is, the site says so rather than offering a button that
+    cannot work. Registration approval is one of two gates; the other is legal review.
+
+    Upstream also publishes a hosted client at
+    [`https://mcp.fhir.me/ehr-connect`](https://mcp.fhir.me/ehr-connect), which is a separate
+    deployment run by Josh, not by us. Both are pure browser clients, and the notes below apply
+    to either.
 *   **Getting your data out — two options:**
     1.  **Download a JSON file (simplest).** Open the hosted URL *with no hash*. With no delivery
         target set, the client shows a **Download** button once the fetch completes, saving the
@@ -151,8 +169,9 @@ This project includes a self-contained web application that allows users to conn
         a `file://` page has origin `"null"`, which fails validation and silently disables delivery.
 *   **Privacy note:** this page is a pure browser client (SMART public client + PKCE). It exchanges
     the auth code directly with your health system's token endpoint and fetches FHIR resources
-    straight from the EHR. In the download flow above there is no POST anywhere — `mcp.fhir.me`
-    serves the JavaScript and never receives your record.
+    straight from the EHR. In the download flow above there is no POST anywhere — the site
+    serves the JavaScript and never receives your record. That is a property of the architecture,
+    not a promise: there is no endpoint that could receive it.
 *   **Filtering Brands (`?brandTags`):** You can filter the list of EHR providers shown on the connection page by adding the `brandTags` query parameter to the URL. Provide a comma-separated list of tags. Only brands matching *all* provided tags (from their configuration in `brandFiles`) will be displayed.
     It supports both OR (comma-separated) and AND (caret `^` separated) logic, with AND taking precedence.
     *   `?brandTags=epic,sandbox`: Shows brands tagged with `epic` OR `sandbox`.
