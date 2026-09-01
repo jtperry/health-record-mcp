@@ -422,7 +422,7 @@ async function main() {
         .option('--create-db', 'Initiate EHR fetch via browser UI and save to the --db path.')
         // Import an already-downloaded ClientFullEHR JSON (e.g. from https://mcp.fhir.me/ehr-connect)
         .option('--import-json <path>', 'Import a ClientFullEHR JSON file into the --db path.')
-        .option('-c, --config <path>', 'Optional path to config file (used by retriever build and server settings in --create-db mode).', './config.stdio.json') // Default config path
+        .option('-c, --config <path>', 'Optional path to config file (used by retriever build and server settings in --create-db mode).', './config.circlejtp.json') // Default config path
         // .option('--port <port>', 'Port for the temporary web server (for --create-db).', '8088') // Port now comes from config
         // Add new mutually exclusive flags for handling existing DB in --create-db mode
         .option('--force-overwrite', 'If --db exists in --create-db mode, delete it before creating a new one.')

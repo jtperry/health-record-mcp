@@ -23,11 +23,20 @@ fhir_resources
 ```
 
 With the following columns:
+-   `source` (TEXT): Which health system the row came from. **Part of the primary key.**
 -   `resource_type` (TEXT): The FHIR resource type (e.g., "Patient", "Observation")
 -   `resource_id` (TEXT): The resource ID
 -   `json` (TEXT): The full JSON representation of the resource
+-   `source_format` (TEXT): `'fhir'` or `'ccda'` — how the row was ingested
+-   `ingested_at` (TEXT): When it was ingested, distinct from any clinical date on the resource
 
-This approach allows for efficient querying by resource type and ID, while maintaining a simple database structure.
+Primary key: `(source, resource_type, resource_id)`.
+
+**`source` is in the key because it has to be.** Two health systems will happily issue the same
+`resource_id` for entirely different resources, so keying on `(resource_type, resource_id)` alone
+— as upstream does — means the second system's data silently overwrites the first's. Databases
+created before this column existed are migrated in place on first use; `--backfill-source` labels
+their existing rows.
 
 ### Attachments Table
 
@@ -39,6 +48,7 @@ fhir_attachments
 
 The attachments table has the following columns:
 -   `id` (INTEGER): Auto-incrementing primary key
+-   `source` (TEXT): Which health system the attachment came from
 -   `resource_type` (TEXT): Type of FHIR resource the attachment belongs to
 -   `resource_id` (TEXT): ID of the FHIR resource
 -   `path` (TEXT): Path within the resource where the attachment was found
@@ -46,6 +56,12 @@ The attachments table has the following columns:
 -   `json` (TEXT): Original JSON representation of the attachment node
 -   `content_raw` (BLOB): Raw binary data of the attachment (if available)
 -   `content_plaintext` (TEXT): Extracted text content (if available)
+-   `source_format` (TEXT), `ingested_at` (TEXT): as on `fhir_resources`
+
+A unique index on `(source, resource_type, resource_id, path, content_type)`, combined with
+`INSERT OR IGNORE`, makes re-ingesting a provider idempotent. Upstream used a bare `INSERT`, so
+pulling the same provider twice stored every note and PDF again. `(source, resource_type,
+resource_id)` is a foreign key into `fhir_resources`.
 
 ## Example SQL Queries (for `query_record` tool)
 

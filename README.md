@@ -1,46 +1,30 @@
-# EHR Tools with MCP and FHIR
-![EHR Tools Overview](static/overview.png)
+# health-record-mcp
 
-https://youtu.be/K0t6MRyIqZU?si=Mz4d65DcAD3i2YbO
+Tools for assembling a **personal longitudinal medical record** from more than one health
+system, and serving it to an LLM over the Model Context Protocol.
 
-This project acts as a specialized server providing tools for Large Language Models (LLMs) and other AI agents to interact with Electronic Health Records (EHRs). It leverages the **SMART on FHIR** standard for secure data access and the **Model Context Protocol (MCP)** to expose the tools.
+A record is retrieved in the browser over SMART on FHIR, stored in local SQLite, and queried
+through MCP tools. The record stays on your machine.
 
-Think of it as a secure gateway and toolkit enabling AI to safely access and analyze patient data from diverse EHR systems.
+## Built on jmandel/health-record-mcp
 
-## Changes in This Fork
+This is a fork of **[jmandel/health-record-mcp](https://github.com/jmandel/health-record-mcp)**
+by [Josh Mandel](https://github.com/jmandel), and it exists because that project already solved
+the hard part: a browser-only SMART on FHIR client that authenticates against a real health
+system, walks the FHIR graph, pulls attachments, and hands back a complete record without a
+server ever touching the data. The retriever, the MCP tool design (`grep_record`,
+`query_record`, `eval_record`), the SQLite representation, and the privacy architecture that
+makes all of it defensible are Josh's work. Go look at the upstream project.
 
-This is a fork of [`jmandel/health-record-mcp`](https://github.com/jmandel/health-record-mcp), adapted
-for keeping a personal longitudinal record that spans more than one health system. Everything
-upstream still works as documented; the additions are:
+Josh's walkthrough of the original project: <https://youtu.be/K0t6MRyIqZU>
 
-*   **Import a downloaded JSON record (`--import-json`).** Load a `ClientFullEHR` file straight into
-    SQLite without re-running the SMART flow. This means you can authenticate once through the
-    hosted web client — using *its* registered client ID, so there is no need to register an app
-    with your health system — then iterate locally against the saved file. See
-    *Local MCP Server via Stdio* below.
+**This fork is not a drop-in replacement for upstream, and it is not maintained by Josh.** File
+issues about anything here against *this* repository, not upstream.
 
-*   **Multiple health systems in one database (`--source`).** Records can be labelled with the
-    provider they came from, stored in a `source` column on `fhir_resources` and `fhir_attachments`
-    and queryable from `query_record`. `--backfill-source` labels a database that was built before
-    the column existed. See *Local MCP Server via Stdio* below.
-
-*   **Re-ingesting a provider is now idempotent.** Attachments previously used a bare `INSERT`, so
-    appending the same pull twice stored every note and PDF again. They are now unique on
-    `(resource_type, resource_id, path, content_type)` and inserted with `OR IGNORE`, matching the
-    upsert behaviour resources already had. The schema migrates in place on first use, collapsing
-    any duplicates a prior append left behind.
-
-*   **PHI hygiene.** `data/`, `*.sqlite`, and `*.pem` are gitignored, and the docs steer records to a
-    location outside the working tree. These are a safety net, not the primary protection.
-
-*   **Fixed a misleading log line.** The `/ehr-data` handler warned that an existing database "will
-    be overwritten" when it would actually be appended to — the overwrite decision is made earlier,
-    by `--force-overwrite` / `--force-concat`.
-
-### Quick start for this fork
+## Quick start
 
 ```bash
-# One-time: build a database from a record downloaded via the hosted web client.
+# Build a database from a record downloaded via a hosted web client.
 bun run src/cli.ts --import-json ~/health-records/ehr-data.json \
   --db ~/health-records/my_record.sqlite --source MultiCare
 
@@ -52,8 +36,76 @@ bun run src/cli.ts --db ~/health-records/my_record.sqlite --create-db \
 bun run src/cli.ts --db ~/health-records/my_record.sqlite
 ```
 
-Back up the database before any run that writes to an existing file; `--force-concat` mutates it in
-place and `--force-overwrite` deletes it outright.
+Back up the database before any run that writes to an existing file: `--force-concat` mutates
+it in place and `--force-overwrite` deletes it outright.
+
+## What this fork changes
+
+**A record that spans health systems.** Resources and attachments carry a `source`, and `source`
+is part of the primary key on `fhir_resources` and `fhir_attachments`. Two health systems can
+issue the same `resource_id` for different resources, so keying without it silently loses data.
+The schema migrates in place, and `--backfill-source` labels a database built before the column
+existed. Re-ingesting a provider is idempotent: attachments are unique on
+`(resource_type, resource_id, path, content_type)` and inserted with `OR IGNORE`, where upstream
+used a bare `INSERT` that stored every note again on each pull.
+
+**C-CDA ingestion (`src/ccdaToEhr.ts`).** Not every provider offers a usable FHIR API. Some —
+athenahealth-backed practices in particular — export C-CDA XML instead, so this converts a C-CDA
+document into the same `ClientFullEHR` shape the FHIR path produces, and it lands in the same
+database alongside everything else.
+
+**Import without registering an app (`--import-json`).** Load a downloaded record straight into
+SQLite without re-running the SMART flow, so you can authenticate once through a hosted client
+and then iterate locally.
+
+**A deployable website (`site/`).** A Cloudflare Worker serving a landing page and the retriever,
+which is a thing upstream does not ship. See [`site/README.md`](site/README.md).
+
+**Retriever fixes.** FHIR URLs were built by joining a base that usually already ends in `/` with
+another `/`; Epic tolerated the doubled slash on most paths but rejected it on some, which cost
+real resources. Expected crawl outcomes — a 403 for a resource outside the granted scope — are
+reported as skips rather than errors. Patient-scoped searches for `Practitioner` and
+`Organization` were dropped, since neither defines a `patient` search parameter in FHIR R4.
+
+**PHI hygiene.** `data/`, `*.sqlite` and `*.pem` are gitignored and the docs steer records
+outside the working tree. A safety net, not the primary protection.
+
+## What was removed from the fork, and why
+
+So that nobody has to guess which parts of this tree are live, everything not used here has been
+deleted rather than left to rot. All of it remains in
+[upstream](https://github.com/jmandel/health-record-mcp) and in this repository's git history.
+
+| Removed | Why |
+|---|---|
+| `a4a/` | Josh's agent-to-agent subproject. Nothing here imports it. Every test in this repository lived here and none of them ran. |
+| `intrabrowser/`, `src/IntraBrowserTransport.ts`, `src/tools-browser-entry.ts` | In-browser MCP transport, along with the `build:ehr-tool` script and the GitHub Pages workflow that packaged it. This fork deploys to Cloudflare instead. |
+| `static/brands/epic.json`, `user-access-brands-endpoint-bundle-epic.json` | 92 MB of brand directory snapshots from 2025. Regenerated weekly into R2 now; `site/public/brands/epic-sample.json` covers local work. |
+| `config.{jmandel,claude,epicprod,epicsandbox,epic-gh-pages,stdio,smartsandbox}.json` | Upstream's own deployment configs, carrying its client ids and host names. `config.circlejtp.json` is this fork's; `sample-config.json` remains as the template. |
+| `Dockerfile` | Its entrypoint was `index.ts`, which does not exist in this repository or upstream. |
+| `src/utils.ts`, `src/__tests__/dataFlow.test.ts`, `opener.html`, `static/ehretriever_caller.html`, `static/brands/index.html` | Unreferenced. The test imported a module that does not exist. |
+
+Known broken and left alone: `src/sse.ts` — the `start` script — imports `./streamable-http.ts`,
+which is absent here and upstream. `start:http` works. Fixing it is out of scope for this fork.
+
+## If you fork or host this
+
+Please do — that is the point of publishing it. Two conditions, and they are about identity
+rather than code.
+
+**Remove every reference to JT Perry and to `health.circlejtp.me`, and supply your own.** A
+deployment of this software must name *its own* operator, with *its own* contact details, in its
+public documentation, terms, and any app registration. Do not represent, imply, or leave standing
+any suggestion that a deployment you run is operated by, endorsed by, or affiliated with the
+maintainer of this repository.
+
+**Your deployment is yours.** If you register this application with Epic or any other health
+system, that registration, the attestations in it, and everything that follows from it are
+yours. The maintainer of this repository is not a party to it and is not responsible for it. The same goes for anything
+that happens to records your deployment handles.
+
+This is a statement of intent, not legal advice, and it is written by a non-lawyer. The MIT
+licence in [`LICENSE.txt`](LICENSE.txt) governs; nothing here narrows the rights it grants.
 
 ## The Core Idea
 
@@ -179,7 +231,7 @@ This mode is ideal for running the MCP server locally, often used with tools lik
         # Example: Start the MCP server using the saved data
         bun run src/cli.ts --db ./data/my_record.sqlite
         ```
-    *   **Configuration (`config.*.json`):** This process relies on a configuration file (e.g., `config.epicsandbox.json`) which defines available EHR brands/endpoints in a `brandFiles` array. Each entry in this array specifies the brand's details, including:
+    *   **Configuration (`config.*.json`):** This process relies on a configuration file (e.g., `config.circlejtp.json`) which defines available EHR brands/endpoints in a `brandFiles` array. Each entry in this array specifies the brand's details, including:
         *   `url`: Path/URL to the brand definition file (like `static/brands/epic-sandbox.json`).
         *   `tags`: An array of strings (e.g., `["epic", "sandbox"]`) used for categorization or filtering.
         *   `vendorConfig`: Contains SMART on FHIR client details (`clientId`, `scopes`).
@@ -200,7 +252,7 @@ This mode is ideal for running the MCP server locally, often used with tools lik
     }
     ```
 
-### 3. Full MCP Server via SSE (`src/sse.ts` / `index.ts`)
+### 3. Full MCP Server via SSE (`src/sse.ts`)
 
 This mode runs a persistent server suitable for scenarios where multiple clients might connect over the network. It uses Server-Sent Events (SSE) for the MCP communication channel.
 

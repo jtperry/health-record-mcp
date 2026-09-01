@@ -130,8 +130,8 @@ full, but can only reach the retriever UI through CSS.
   `<script>` are allowed. `connect-src` is open only because the retriever must reach whichever
   FHIR endpoint the user picks.
 
-Nothing in `site/` imports from `a4a/` or `intrabrowser/`; those are the upstream project and
-are unrelated to the website.
+`site/` depends on nothing else in this repository except the retriever bundle built from
+`../ehretriever.ts`.
 
 ## Local development
 
