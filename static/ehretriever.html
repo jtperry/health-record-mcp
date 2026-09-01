@@ -180,6 +180,19 @@
   #progress-text { font-family: var(--mono); font-size: 13.5px; color: var(--body); }
   .progress-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 
+  /* Shown when the app has not reached the chosen health system yet. Informational,
+     not an error: nothing is broken and there is nothing for the patient to fix. */
+  .panel.notice { border-left: 4px solid var(--navy); }
+  .panel.notice h2 {
+    font-family: var(--serif); font-weight: 400; font-size: 26px; line-height: 1.25;
+    margin: 0 0 16px;
+  }
+  .panel.notice h2:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  .panel.notice p { margin: 0 0 14px; font-size: 16.5px; line-height: 1.65; color: var(--body); }
+  .panel.notice ul { margin: 0 0 20px; padding-left: 22px; display: flex; flex-direction: column; gap: 9px; }
+  .panel.notice li { font-size: 16.5px; line-height: 1.6; color: var(--body); }
+  .panel.notice a.btn { text-decoration: none; }
+
   footer.site { border-top: 1px solid var(--line); background: var(--callout); padding-top: 40px; padding-bottom: 40px; }
   footer.site .inner {
     max-width: 920px; margin: 0 auto; display: flex; flex-wrap: wrap;
@@ -300,6 +313,6 @@
   </div>
 </div>
 
-<script src="./dist/ehretriever.bundle.js"></script>
+<script src="./dist/ehretriever.bundle.js?v=20260901c"></script>
 </body>
 </html>

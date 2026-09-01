@@ -940,9 +940,31 @@ reports `not yet distributed` only when the control matches, and flags the case 
 organization accepts the control too — there the probe proves nothing and the result must not
 be read as success.
 
-**The practical consequence for patients:** someone whose provider has not received the app
-yet gets Epic's generic OAuth2 error, with no indication that waiting would fix it. Worth
-considering whether the connect screen should say so.
+**The retriever now checks before sending anyone away.** A patient whose provider has not
+received the app would otherwise land on Epic's generic OAuth2 error, on their provider's own
+domain, with nothing to suggest that waiting would fix it — and no way back.
+
+`isClientUndistributed()` runs the probe from the browser immediately before the redirect. It
+works because of an asymmetry that happens to be the right way round:
+
+| | Epic's response | Readable from JS? |
+|---|---|---|
+| Not distributed | renders the error page itself, with CORS headers | **yes** |
+| Distributed | redirects to a MyChart login host with no CORS headers | no, the fetch rejects |
+
+So the probe can only ever prove the *negative*, which is the safe direction. It stops the
+flow only when it has actually read the error page; a rejected fetch, a timeout, or anything
+unfamiliar continues to the redirect exactly as before. A patient whose provider works must
+never be blocked by a probe that failed for its own reasons.
+
+It runs browser-to-provider like everything else, so it does not weaken the claim that we
+never learn which health system you use — the alternative, proxying the check through the
+Worker, would have.
+
+Verified live against both cases: Mayo Clinic (not distributed) stops on our own page with an
+explanation and focus moved to its heading; Children's Healthcare of Atlanta (distributed)
+proceeds to the real MyChart login untouched. The panel is 0 violations under axe-core across
+WCAG 2.0/2.1/2.2 A and AA.
 
 ## 10. Open questions
 

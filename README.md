@@ -44,6 +44,62 @@ bun run src/cli.ts --db ~/health-records/my_record.sqlite
 Back up the database before any run that writes to an existing file: `--force-concat` mutates
 it in place and `--force-overwrite` deletes it outright.
 
+## You have the file. Now what?
+
+The download is a single JSON file — every resource your health system returned, plus the
+text of any notes and documents attached to them. Two things to do with it, in order.
+
+### 1. Protect it, because nothing else will
+
+**HIPAA stopped applying the moment it reached your disk.** It governs your health system,
+not you and not this software. That file is likely the most sensitive document you own, and
+it cannot be un-disclosed: unlike a password, you cannot rotate a diagnosis.
+
+- Turn on **full-disk encryption** — FileVault on macOS, BitLocker on Windows, LUKS on Linux.
+  Without it, anyone holding the device holds the record.
+- **Move it out of `~/Downloads`.** Downloads, Desktop and Documents are synced to iCloud,
+  OneDrive, Dropbox or Google Drive on most machines by default, often without the owner
+  realising. Check before you assume otherwise.
+- **Tighten the permissions:** `chmod 600 health-record-*.json` and `chmod 700` its directory.
+- **Think hard before pasting it into anything**, an AI assistant included. Whatever you paste
+  may be retained, reviewed by humans, and used for training.
+- **Delete it when you are done**, and empty the trash.
+- On a shared or public computer, do not download it at all.
+
+### 2. Load it into a database and ask questions
+
+```bash
+bun run src/cli.ts --import-json ~/health-records/health-record-2026-09-01.json \
+  --db ~/health-records/my_record.sqlite --source "Your Health System"
+```
+
+`--source` is a label of your choosing and it matters: it is part of the primary key, so it is
+what lets a second health system's data live alongside the first without one overwriting the
+other. Use the same string when you re-import from the same provider.
+
+Keep the database somewhere deliberate, not in this repository — `data/`, `*.sqlite` and
+`*.pem` are gitignored as a safety net, but the safer habit is to keep records outside the
+working tree entirely.
+
+Then serve it to an LLM over MCP:
+
+```bash
+bun run src/cli.ts --db ~/health-records/my_record.sqlite
+```
+
+That exposes three tools over stdio — `grep_record` for text and regex search across
+resources *and* attachment text, `query_record` for read-only SQL against the FHIR tables, and
+`eval_record` for JavaScript over the whole record. Point any MCP client at it. The record
+never leaves your machine.
+
+If a provider gives you a C-CDA export instead of a working FHIR API — common with
+athenahealth-backed practices — `--import-ccda <file.xml|file.zip> --source "Name"` puts it in
+the same database alongside everything else.
+
+**Re-importing is safe.** Resources upsert and attachments are unique on
+`(source, resource_type, resource_id, path, content_type)`, so pulling the same provider again
+updates rather than duplicating.
+
 ## What this fork changes
 
 **A record that spans health systems.** Resources and attachments carry a `source`, and `source`

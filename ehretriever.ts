@@ -659,6 +659,125 @@ function onModalKeydown(event: KeyboardEvent) {
 
 interface VendorAuthConfig { clientId: string; scopes: string; redirectUrl?: string; note?: string }
 
+/**
+ * The screen a patient sees when their provider has not received the app yet.
+ *
+ * Built rather than templated because the organisation name is interpolated, and it comes
+ * from the brand directory - the same untrusted third-party data the tiles are built from.
+ *
+ * The heading takes focus: the user pressed a button expecting to leave the page, and
+ * without moving focus a screen-reader user is left in a list that silently changed.
+ */
+function showNotYetAvailable(organizationName: string) {
+    hideBrandModal();
+    if (brandSelectorContainer) brandSelectorContainer.style.display = 'none';
+    showProgressContainer(false);
+    showStatusContainer(true);
+
+    if (!statusContainer) return;
+    statusContainer.textContent = '';
+    statusContainer.className = 'panel notice';
+
+    const heading = document.createElement('h2');
+    heading.id = 'not-available-h';
+    heading.tabIndex = -1;
+    heading.textContent = 'This tool has not reached your health system yet';
+    statusContainer.appendChild(heading);
+
+    // role="status" rather than "alert": nothing is wrong, and an assertive
+    // interruption would overstate it.
+    const explain = document.createElement('p');
+    explain.setAttribute('role', 'status');
+    explain.textContent = `${organizationName} has not yet received this application from Epic. `
+        + 'Epic sends new applications to each health system on its own schedule, so this usually '
+        + 'resolves on its own within a few days. Nothing is wrong with your account, and there is '
+        + 'nothing you need to fix.';
+    statusContainer.appendChild(explain);
+
+    const next = document.createElement('p');
+    next.textContent = 'What you can do:';
+    statusContainer.appendChild(next);
+
+    const list = document.createElement('ul');
+    [
+        'Try again in a few days.',
+        'Try a different health system, if more than one holds part of your record.',
+        'Ask your health system\u2019s medical records department for a copy directly \u2014 your right to it does not depend on this tool.',
+    ].forEach(text => {
+        const li = document.createElement('li');
+        li.textContent = text;
+        list.appendChild(li);
+    });
+    statusContainer.appendChild(list);
+
+    const actions = document.createElement('p');
+    const back = document.createElement('a');
+    back.href = '/ehr-connect';
+    back.className = 'btn btn-secondary';
+    back.textContent = 'Choose a different health system';
+    actions.appendChild(back);
+    statusContainer.appendChild(actions);
+
+    // After the DOM settles, so the announcement is not lost to the rebuild.
+    window.setTimeout(() => heading.focus(), 0);
+}
+
+/**
+ * Has this app reached this health system yet?
+ *
+ * Epic distributes an app to qualifying customers on each organisation's own schedule, so
+ * for a while after going live the app works at some and not others. An organisation that
+ * has not received it yet answers the authorize request with a generic "OAuth2 Error"
+ * page - which the patient sees as a dead end on their provider's own domain, with
+ * nothing to suggest that waiting would fix it.
+ *
+ * The probe exploits an asymmetry that happens to be exactly the right way round:
+ *
+ *   not distributed -> Epic renders the error page itself, and sends CORS headers with
+ *                      it, so the body is readable here.
+ *   distributed     -> Epic redirects to a MyChart login host that sends no CORS headers,
+ *                      so the fetch rejects and we learn nothing.
+ *
+ * So this can only ever prove the *negative*, which is the safe direction: we warn only
+ * when the error page has actually been read. Every other outcome - a rejected fetch, a
+ * timeout, an unfamiliar body - continues to the redirect exactly as before. A patient
+ * whose provider works must never be blocked by a probe that failed for its own reasons.
+ *
+ * Runs browser-to-provider like the rest of the flow. Nothing is sent to our server, so
+ * this does not weaken the claim that we never learn which health system you use.
+ */
+async function isClientUndistributed(authorizationEndpoint: string, clientId: string, fhirBaseUrl: string): Promise<boolean> {
+    try {
+        const probeUrl = new URL(authorizationEndpoint);
+        probeUrl.searchParams.set('response_type', 'code');
+        probeUrl.searchParams.set('client_id', clientId);
+        probeUrl.searchParams.set('scope', 'patient/*.read');
+        probeUrl.searchParams.set('redirect_uri', window.location.origin + '/ehr-callback');
+        probeUrl.searchParams.set('state', 'distribution-probe');
+        probeUrl.searchParams.set('aud', fhirBaseUrl);
+
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), 6000);
+        let body: string;
+        try {
+            const response = await fetch(probeUrl.toString(), { mode: 'cors', signal: controller.signal });
+            body = await response.text();
+        } finally {
+            window.clearTimeout(timer);
+        }
+
+        // Only the error page is a verdict. Anything else means proceed.
+        const undistributed = /OAuth2\s*Error/i.test(body);
+        console.log(`[distribution] ${undistributed ? 'error page read - app not yet at this organisation' : 'no error page; continuing'}`);
+        return undistributed;
+    } catch (e) {
+        // Redirected to a login host without CORS, offline, blocked, timed out - all
+        // indistinguishable here, and none of them justify stopping the user.
+        console.log('[distribution] probe inconclusive; continuing to authorization.', e);
+        return false;
+    }
+}
+
 async function initiateSmartAuth(fhirBaseUrl: string, vendorAuthConfig: VendorAuthConfig, vendorLabel: string = 'vendor') {
     // Define the default redirect URI (this page) - Defined here as it's only needed here
     const defaultRedirectUri = window.location.origin + window.location.pathname;
@@ -733,7 +852,15 @@ async function initiateSmartAuth(fhirBaseUrl: string, vendorAuthConfig: VendorAu
         authUrl.searchParams.set('code_challenge', codeChallenge);
         authUrl.searchParams.set('code_challenge_method', 'S256');
 
-        // 5. Redirect user
+        // 5. Check the app has reached this organisation before sending the user away.
+        updateStatus('Checking availability at this organization...');
+        if (await isClientUndistributed(authorizationEndpoint, clientId, fhirBaseUrl)) {
+            sessionStorage.removeItem(AUTH_STORAGE_KEY); // nothing will come back
+            showNotYetAvailable(vendorLabel);
+            return;
+        }
+
+        // 6. Redirect user
         updateStatus('Redirecting to EHR for authorization...');
         console.log(`[initiateSmartAuth] Redirecting to: ${authUrl.toString()}`);
         window.location.href = authUrl.toString();
