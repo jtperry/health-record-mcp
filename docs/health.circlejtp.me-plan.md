@@ -801,6 +801,13 @@ Removed rather than restricted. An allowlist would have kept a capability nothin
 one way for data to leave the page. The code now has no delivery mechanism to constrain,
 misconfigure, or explain. Delivery hashes are ignored.
 
+**Verified end to end after removal (2026-09-01).** A full sandbox run produced 327 resources
+across 18 types and 5 attachments, every one carrying both `contentPlaintext` and
+`contentBase64`, RTF included. Nothing regressed when the delivery paths were cut, and the
+download button is now the only way data leaves the page — which is what the Summary and both
+Data Use Questionnaires say. 263 of those resources carry ids longer than 64 characters (max
+88), which remains the argument for the unconstrained FHIR ID setting on the registration.
+
 ## 10. Open questions
 
 - **Does the FTC Health Breach Notification Rule (16 CFR Part 318) apply?** It covers vendors
