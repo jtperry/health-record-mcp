@@ -912,6 +912,38 @@ serve. Measured on the live page, the sentinel sat 5,071px above the viewport af
 jump, so the old test could never fire. The gate is now position-based: reaching *or passing*
 the end of the warning satisfies it.
 
+### 9.7 Production distribution is per-organization, and it is already uneven
+
+Marked ready for production 2026-09-01 with Automatic Client Distribution set to **USCDI v3**,
+so Epic pushes the app to qualifying customers rather than requiring each to enable it. That
+push is not atomic: within hours of going live the app worked at one organization and not at
+others.
+
+Measured the same day, each probe paired against an all-zeros control because Epic serves an
+identical `OAuth2 Error` page for a client it has never heard of and one that simply has not
+arrived yet:
+
+| Organization | Our client id | Control |
+|---|---|---|
+| Children's Healthcare of Atlanta | MyChart login | `OAuth2 Error` |
+| Mayo Clinic | `OAuth2 Error` | `OAuth2 Error` |
+| MultiCare | `OAuth2 Error` | `OAuth2 Error` |
+| UW Medicine | `OAuth2 Error` | `OAuth2 Error` |
+
+One organization answering proves the registration itself is sound and distribution has begun.
+The rest are waiting on their own sync, not on anything we control or can fix — the same shape
+as the sandbox wait in §7.2–7.3, and the same trap: the error page carries no detail, so a
+failure read on its own invites changing a configuration that was never wrong.
+
+`scripts/check-epic-distribution.sh` runs the paired probe for any named organization. It
+reports `not yet distributed` only when the control matches, and flags the case where an
+organization accepts the control too — there the probe proves nothing and the result must not
+be read as success.
+
+**The practical consequence for patients:** someone whose provider has not received the app
+yet gets Epic's generic OAuth2 error, with no indication that waiting would fix it. Worth
+considering whether the connect screen should say so.
+
 ## 10. Open questions
 
 - **Does the FTC Health Breach Notification Rule (16 CFR Part 318) apply?** It covers vendors
