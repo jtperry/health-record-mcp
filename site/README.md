@@ -45,6 +45,52 @@ the directory from 96,627 searchable items to ~1,270.
 
 ## Working on the UI
 
+### The landing page has a structure that is not a style choice
+
+Full rationale in [`../docs/health.circlejtp.me-plan.md`](../docs/health.circlejtp.me-plan.md)
+§3–4; the constraints that survive a redesign are these.
+
+One page, read top to bottom, in this order: hero; your right to this data; **the warning**;
+how it works; what we do not do; protecting the file; connect; disclaimer; references.
+
+The warning is the reason the page exists. It sits **above** the action, never in a footer or
+behind a "Terms" link, and its treatment is specified: full-width panel, high-contrast border,
+warning icon, the largest body type on the page, **not dismissible and not collapsed by
+default**. Making it tidier by shrinking it, folding it into an accordion, or moving it below
+the fold defeats the page. Sections 2, 5 and 9 make legal and factual claims with citations —
+edit their presentation, not their words.
+
+### The consent gate is functional, not decorative
+
+Three conditions, all required: the warning has been scrolled to its end, which unlocks the
+checkbox; the checkbox is ticked, which unlocks the button; and a client id is configured on
+the Worker, which is what `data-connect-enabled` reports. Consent is deliberately not
+persisted — it is given again on every visit.
+
+**Gate the button with the platform `disabled` attribute.** The original design prototype used
+`aria-disabled` plus `pointer-events: none`, which is not enforcement: keyboard and assistive
+technology users can still activate such a control. This is the single easiest thing for a
+design pass to reintroduce, and it converts an informed-consent gate into a picture of one.
+
+### Accessibility
+
+**This site is built to meet WCAG 2.2 Level AA.** If you find somewhere it does not, please
+tell us by opening an issue: <https://github.com/jtperry/health-record-mcp/issues>.
+
+That bar is not decoration here. The page exists to make sure people understand a warning
+before acting on it, so an inaccessible warning is a failed warning — and the audience, people
+retrieving their own medical records, skews toward disability and assistive technology use.
+
+The page already ships semantic landmarks, every `section` tied to its heading with
+`aria-labelledby`, an unbroken `h1` → `h2` → `h3` order, `:focus-visible` styling,
+`role="status"` on the gate's live region, `aria-describedby` on the consent checkbox, and a
+`prefers-reduced-motion` block. A redesign must not regress any of it. Check contrast against
+rendered colours rather than by eye, keep the page usable at 320px and at 200% zoom, and test
+the consent gate by keyboard alone — that path is where a redesign breaks it.
+
+One known item to fix rather than inherit: the consent checkbox is 22×22 CSS px, which meets
+SC 2.5.8 only via the spacing exception. 24×24 removes the argument.
+
 ### What is editable here, and what is not
 
 | Path | |
