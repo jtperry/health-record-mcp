@@ -363,10 +363,18 @@ function renderBrandItemsInChunks(itemsToRender: any[]) {
     if (currentBrandRenderAbortController) { currentBrandRenderAbortController.abort(); }
     currentBrandRenderAbortController = new AbortController();
     const signal = currentBrandRenderAbortController.signal;
-    if (brandResultsContainer) brandResultsContainer.innerHTML = ''; // Clear previous results
+    if (brandResultsContainer) brandResultsContainer.textContent = ''; // Clear previous results
 
     if (itemsToRender.length === 0) {
-        if (brandResultsContainer) brandResultsContainer.innerHTML = '<p class="brand-status-message">No matching organizations found.</p>';
+        if (brandResultsContainer) {
+            // Static string, but built as a node so this file contains no innerHTML at all
+            // and the "no untrusted markup" property is checkable with one grep.
+            const empty = document.createElement('li');
+            empty.className = 'brand-status-message';
+            empty.textContent = 'No matching organizations found.';
+            brandResultsContainer.textContent = '';
+            brandResultsContainer.appendChild(empty);
+        }
         if (brandSearchSpinner) brandSearchSpinner.style.display = 'none';
         return;
     }
@@ -958,6 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (error) {
         // Handle error response from EHR authorization
+        try { history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
         showStatusContainer(true);
         updateStatus(`Authorization Error: ${error} - ${errorDescription || 'No description provided.'}`, true);
         sessionStorage.removeItem(AUTH_STORAGE_KEY); // Clean up state on error
@@ -965,6 +974,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (code && state) {
+        // The authorization code and state are captured above; drop them from the visible
+        // URL before anything else runs. Left in place they persist in browser history,
+        // in any link the user copies or screenshot they take, and in edge/provider request
+        // logs. The code is single-use and short-lived, but it is a bearer credential for
+        // this patient's record until it is exchanged.
+        //
+        // replaceState rather than pushState: a Back press must not return to a URL that
+        // re-triggers the exchange with an already-spent code.
+        try {
+            history.replaceState({}, document.title, window.location.pathname);
+        } catch (e) {
+            console.warn('Could not strip the authorization code from the URL:', e);
+        }
+
         // --- Phase 2: Handle Redirect ---
         (async () => { // Wrap redirect handling in an async IIFE
             showStatusContainer(true);

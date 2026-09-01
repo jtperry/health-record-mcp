@@ -157,6 +157,33 @@ function findAttachments(obj: any, currentPath: string = ''): { attachment: any,
     return attachments;
 }
 
+/**
+ * May this URL be fetched with the user's access token attached?
+ *
+ * The crawler follows references and attachment URLs out of FHIR content, and FHIR
+ * content can carry absolute URLs. Without this check a resource containing
+ * `"reference": "https://attacker.example/x"` would cause the browser to send a
+ * `Bearer` header - the user's live EHR access token - to that host. The record itself
+ * is sensitive; the token is worse, because it can be replayed to fetch the record
+ * again.
+ *
+ * Same-origin as the FHIR base is the rule. Epic serves attachments as `Binary/...`
+ * under the FHIR base, so nothing legitimate in the observed flows needs a second
+ * origin; if a provider ever does, it belongs in an explicit allowlist here rather
+ * than in a blanket exemption.
+ */
+function isTokenAllowedUrl(url: string, fhirBaseUrl: string): boolean {
+    try {
+        const target = new URL(url);
+        const base = new URL(fhirBaseUrl);
+        // http:// would send the token in clear text even to the right host.
+        if (target.protocol !== 'https:') return false;
+        return target.origin === base.origin;
+    } catch {
+        return false;
+    }
+}
+
 // Resolves relative FHIR references (e.g., "Patient/123") to absolute URLs
 function resolveReferenceUrl(reference: string, baseUrl: string): string | null {
     try {
@@ -598,6 +625,20 @@ export async function fetchAllEhrDataClientSideParallel(
 
         try {
             progressCallback(completedFetches, totalTasks, `Fetching: ${task.description}...`);
+
+            // Enforced here rather than at each place a task is created: this is the one
+            // line that attaches the access token, so it is the one line that has to be
+            // right. Anything off-origin is skipped, not fetched without the header -
+            // fetching it at all would still leak which resources this patient has.
+            if (!isTokenAllowedUrl(task.url, fhirBaseUrl)) {
+                console.warn(`Skipped "${task.description}": ${task.url} is not on the FHIR server's origin, so the access token was not sent to it.`);
+                // Deliberate skip, not a failure: the `finally` below still releases the
+                // pool slot and advances progress, and this keeps the run from reporting
+                // a fault the user cannot act on.
+                taskCompletedSuccessfully = true;
+                return discoveredTasks;
+            }
+
             // Use the dynamically set headers
             const response = await fetchWithTimeout(task.url, { headers: currentHeaders }, REQUEST_TIMEOUT_MS);
             

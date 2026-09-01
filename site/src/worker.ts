@@ -59,18 +59,42 @@ function securityHeaders(): Record<string, string> {
     return {
         'Content-Security-Policy': [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline'",
+            // No inline scripts: the landing and terms behaviour lives in /js/*.js so
+            // this can stay 'self'. Without 'unsafe-inline', an HTML injection that got
+            // through has no way to execute.
+            "script-src 'self'",
+            // Style still needs it. The pages carry hundreds of style="" attributes,
+            // which style-src-attr governs, and rewriting them all buys much less than
+            // the script-src tightening did.
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data:",
-            "connect-src *",
+            // Cannot be 'self': the retriever must reach whichever FHIR endpoint the user
+            // picks, and the directory holds ~1,300 brands across many hosts. Narrowed
+            // from * to https: so plaintext and WebSocket destinations are refused - a
+            // token must never leave over http.
+            "connect-src https:",
             "form-action 'self'",
             "frame-ancestors 'none'",
             "base-uri 'self'",
+            "object-src 'none'",
+            "frame-src 'none'",
         ].join('; '),
         'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         'X-Frame-Options': 'DENY',
+        // Nothing here needs a device or sensor. Denying them outright means a future
+        // page cannot quietly acquire one.
+        'Permissions-Policy': [
+            'accelerometer=()', 'camera=()', 'geolocation=()', 'gyroscope=()',
+            'magnetometer=()', 'microphone=()', 'payment=()', 'usb=()',
+            'interest-cohort=()',
+        ].join(', '),
+        // The record is assembled in this browsing context. COOP severs any window.opener
+        // relationship, so a page that opened this one cannot reach into it; nothing here
+        // needs an opener now that record delivery is gone (see plan 9.4).
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Resource-Policy': 'same-origin',
         // No health data passes through the Worker, but the landing page should not be
         // cached so long that an updated warning takes days to reach people.
         'Cache-Control': 'public, max-age=300',

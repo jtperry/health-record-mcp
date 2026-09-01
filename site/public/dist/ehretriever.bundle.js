@@ -11877,6 +11877,17 @@ function findAttachments(obj, currentPath = "") {
   }
   return attachments;
 }
+function isTokenAllowedUrl(url, fhirBaseUrl) {
+  try {
+    const target = new URL(url);
+    const base = new URL(fhirBaseUrl);
+    if (target.protocol !== "https:")
+      return false;
+    return target.origin === base.origin;
+  } catch {
+    return false;
+  }
+}
 function resolveReferenceUrl(reference, baseUrl) {
   try {
     if (reference.startsWith("http://") || reference.startsWith("https://")) {
@@ -12221,6 +12232,11 @@ async function fetchAllEhrDataClientSideParallel(accessToken, fhirBaseUrl, patie
     currentHeaders.set("Accept", acceptHeader);
     try {
       progressCallback(completedFetches, totalTasks, `Fetching: ${task.description}...`);
+      if (!isTokenAllowedUrl(task.url, fhirBaseUrl)) {
+        console.warn(`Skipped "${task.description}": ${task.url} is not on the FHIR server's origin, so the access token was not sent to it.`);
+        taskCompletedSuccessfully = true;
+        return discoveredTasks;
+      }
       const response = await fetchWithTimeout(task.url, { headers: currentHeaders }, REQUEST_TIMEOUT_MS);
       let resultData = null;
       let isJson = false;
@@ -12569,10 +12585,15 @@ function renderBrandItemsInChunks(itemsToRender) {
   currentBrandRenderAbortController = new AbortController;
   const signal = currentBrandRenderAbortController.signal;
   if (brandResultsContainer)
-    brandResultsContainer.innerHTML = "";
+    brandResultsContainer.textContent = "";
   if (itemsToRender.length === 0) {
-    if (brandResultsContainer)
-      brandResultsContainer.innerHTML = '<p class="brand-status-message">No matching organizations found.</p>';
+    if (brandResultsContainer) {
+      const empty = document.createElement("li");
+      empty.className = "brand-status-message";
+      empty.textContent = "No matching organizations found.";
+      brandResultsContainer.textContent = "";
+      brandResultsContainer.appendChild(empty);
+    }
     if (brandSearchSpinner)
       brandSearchSpinner.style.display = "none";
     return;
@@ -12917,7 +12938,7 @@ async function fetchBrandsAndInitialize() {
       tagFilterGroups = [["prod"]];
       console.log(`[fetchBrands] No tags specified, defaulting to requiring 'prod' tag.`);
     }
-    const brandIndex = typeof [{ url: "/brands/epic.json", tags: ["epic", "prod"], vendorConfig: { clientId: "0eb38377-086f-4850-98b3-db0bac91e332", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback" } }, { url: "/brands/epic-sandbox.json", tags: ["epic", "sandbox"], vendorConfig: { clientId: "8d804225-8ca7-430b-99f1-2b7762258e09", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback", note: "Epic sandbox test patient - username 'fhircamila', password 'epicepic1'" } }] !== "undefined" && Array.isArray([{ url: "/brands/epic.json", tags: ["epic", "prod"], vendorConfig: { clientId: "0eb38377-086f-4850-98b3-db0bac91e332", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback" } }, { url: "/brands/epic-sandbox.json", tags: ["epic", "sandbox"], vendorConfig: { clientId: "8d804225-8ca7-430b-99f1-2b7762258e09", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback", note: "Epic sandbox test patient - username 'fhircamila', password 'epicepic1'" } }]) ? [{ url: "/brands/epic.json", tags: ["epic", "prod"], vendorConfig: { clientId: "0eb38377-086f-4850-98b3-db0bac91e332", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback" } }, { url: "/brands/epic-sandbox.json", tags: ["epic", "sandbox"], vendorConfig: { clientId: "8d804225-8ca7-430b-99f1-2b7762258e09", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback", note: "Epic sandbox test patient - username 'fhircamila', password 'epicepic1'" } }] : [];
+    const brandIndex = typeof [{ url: "/brands/epic.json", tags: ["epic", "prod"], vendorConfig: { clientId: "0eb38377-086f-4850-98b3-db0bac91e332", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback" } }, { url: "/brands/epic-sandbox.json", tags: ["epic", "sandbox"], vendorConfig: { clientId: "8d804225-8ca7-430b-99f1-2b7762258e09", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback", note: "Epic sandbox test patient. Credentials are published in Epic's own sandbox documentation: https://fhir.epic.com/Documentation?docId=testpatients" } }] !== "undefined" && Array.isArray([{ url: "/brands/epic.json", tags: ["epic", "prod"], vendorConfig: { clientId: "0eb38377-086f-4850-98b3-db0bac91e332", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback" } }, { url: "/brands/epic-sandbox.json", tags: ["epic", "sandbox"], vendorConfig: { clientId: "8d804225-8ca7-430b-99f1-2b7762258e09", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback", note: "Epic sandbox test patient. Credentials are published in Epic's own sandbox documentation: https://fhir.epic.com/Documentation?docId=testpatients" } }]) ? [{ url: "/brands/epic.json", tags: ["epic", "prod"], vendorConfig: { clientId: "0eb38377-086f-4850-98b3-db0bac91e332", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback" } }, { url: "/brands/epic-sandbox.json", tags: ["epic", "sandbox"], vendorConfig: { clientId: "8d804225-8ca7-430b-99f1-2b7762258e09", scopes: "patient/*.read", redirectUrl: "https://health.circlejtp.me/ehr-callback", note: "Epic sandbox test patient. Credentials are published in Epic's own sandbox documentation: https://fhir.epic.com/Documentation?docId=testpatients" } }] : [];
     if (brandIndex.length === 0) {
       throw new Error("No brand index entries provided");
     }
@@ -13031,12 +13052,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const errorDescription = urlParams.get("error_description");
   const defaultRedirectUri = window.location.origin + window.location.pathname;
   if (error) {
+    try {
+      history.replaceState({}, document.title, window.location.pathname);
+    } catch (e2) {}
     showStatusContainer(true);
     updateStatus(`Authorization Error: ${error} - ${errorDescription || "No description provided."}`, true);
     sessionStorage.removeItem(AUTH_STORAGE_KEY);
     return;
   }
   if (code && state) {
+    try {
+      history.replaceState({}, document.title, window.location.pathname);
+    } catch (e2) {
+      console.warn("Could not strip the authorization code from the URL:", e2);
+    }
     (async () => {
       showStatusContainer(true);
       updateStatus("Received authorization code. Validating...");

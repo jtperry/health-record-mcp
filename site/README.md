@@ -228,7 +228,8 @@ Sandbox testing:
 https://health.circlejtp.me/ehr-connect?preview=<token>&brandTags=epic^sandbox
 ```
 
-Epic's test patient is `fhircamila` / `epicepic1`.
+Epic publishes its sandbox test patients and their credentials at
+<https://fhir.epic.com/Documentation?docId=testpatients>.
 
 ## Scopes
 
