@@ -1,0 +1,2405 @@
+{
+ "items": [
+  {
+   "searchName": "access community health centers",
+   "displayName": "Access Community Health Centers",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Access Community Health Centers",
+   "brandId": "72922155-495e-4258-9acb-fbd2a4ccc9ac",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.hosp.wisc.edu/FhirProxy/api/FHIR/R4",
+     "name": "Access Community Health Centers"
+    }
+   ]
+  },
+  {
+   "searchName": "access community health network",
+   "displayName": "Access Community Health Network",
+   "itemType": "brand",
+   "city": null,
+   "state": "IL",
+   "postalCode": null,
+   "brandName": "Access Community Health Network",
+   "brandId": "d01c4888-8fcf-4a08-bf46-528009a06169",
+   "endpoints": [
+    {
+     "url": "https://eprescribing.accesscommunityhealth.net/FHIR/ACCESS/api/FHIR/R4",
+     "name": "Access Community Health Network"
+    }
+   ]
+  },
+  {
+   "searchName": "access health",
+   "displayName": "Access Health",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Access Health",
+   "brandId": "9f7973a3-0159-4112-b683-27650a31e98c",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1439.epichosted.com/FHIRProxyPRD/api/FHIR/R4",
+     "name": "Access Health"
+    }
+   ]
+  },
+  {
+   "searchName": "adapt integrated health care",
+   "displayName": "Adapt Integrated Health Care",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Adapt Integrated Health Care",
+   "brandId": "34c5e440-4af4-44e8-a17e-98c8bc9a3cd1",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/MYCHARTADAPTIHC/api/FHIR/R4",
+     "name": "Adapt Integrated Health Care"
+    }
+   ]
+  },
+  {
+   "searchName": "arkansas children's",
+   "displayName": "Arkansas Children's",
+   "itemType": "brand",
+   "city": null,
+   "state": "AR",
+   "postalCode": null,
+   "brandName": "Arkansas Children's",
+   "brandId": "b217adff-9cd4-4fbf-bccf-f831a0b475cd",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1036.epichosted.com/APIProxyPRD/AC/api/FHIR/R4",
+     "name": "Arkansas Children's"
+    }
+   ]
+  },
+  {
+   "searchName": "axis community health",
+   "displayName": "Axis Community Health",
+   "itemType": "brand",
+   "city": null,
+   "state": "CA",
+   "postalCode": null,
+   "brandName": "Axis Community Health",
+   "brandId": "79a4c46d-b689-4f1d-8c20-706139060558",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/MYCHARTAXIS/api/FHIR/R4",
+     "name": "Axis Community Health"
+    }
+   ]
+  },
+  {
+   "searchName": "bayhealth medical center",
+   "displayName": "Bayhealth Medical Center",
+   "itemType": "brand",
+   "city": null,
+   "state": "DE",
+   "postalCode": null,
+   "brandName": "Bayhealth Medical Center",
+   "brandId": "c8a9bca1-48ae-4ef0-b0e8-7d50027c84c8",
+   "endpoints": [
+    {
+     "url": "https://epproxy.bayhealth.org/FHIR/HOME/api/FHIR/R4",
+     "name": "Bayhealth Medical Center"
+    }
+   ]
+  },
+  {
+   "searchName": "bsa",
+   "displayName": "BSA",
+   "itemType": "brand",
+   "city": null,
+   "state": "TX",
+   "postalCode": null,
+   "brandName": "BSA",
+   "brandId": "dc49ff5c-4e6e-4919-8244-853ea49f4684",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.ardenthealth.com/fhir/BSA/api/FHIR/R4",
+     "name": "BSA"
+    }
+   ]
+  },
+  {
+   "searchName": "care new england",
+   "displayName": "Care New England",
+   "itemType": "brand",
+   "city": null,
+   "state": "RI",
+   "postalCode": null,
+   "brandName": "Care New England",
+   "brandId": "2c1c9d2d-fdd1-41cc-8c64-49cf50658aaa",
+   "endpoints": [
+    {
+     "url": "https://cnesp001.carene.org/FHIR/api/FHIR/R4",
+     "name": "Care New England"
+    }
+   ]
+  },
+  {
+   "searchName": "cherry hill free clinic",
+   "displayName": "Cherry Hill Free Clinic",
+   "itemType": "brand",
+   "city": null,
+   "state": "NJ",
+   "postalCode": null,
+   "brandName": "Cherry Hill Free Clinic",
+   "brandId": "b68470c0-efa9-421a-b805-7efdc49b14d6",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1017.epichosted.com/FHIRProxy/CHFC/api/FHIR/R4",
+     "name": "Cherry Hill Free Clinic"
+    }
+   ]
+  },
+  {
+   "searchName": "chi st. joseph's health",
+   "displayName": "CHI St. Joseph's Health",
+   "itemType": "brand",
+   "city": null,
+   "state": "KY",
+   "postalCode": null,
+   "brandName": "CHI St. Joseph's Health",
+   "brandId": "add2ca25-c956-48fd-94bf-ed88ea088c20",
+   "endpoints": [
+    {
+     "url": "https://rpsouth.catholichealth.net/fhir/api/FHIR/R4",
+     "name": "CHI Memorial"
+    }
+   ]
+  },
+  {
+   "searchName": "chi st. vincent",
+   "displayName": "CHI St. Vincent",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "CHI St. Vincent",
+   "brandId": "901ca3d2-dc8a-4ede-8396-2c0f48b944a5",
+   "endpoints": [
+    {
+     "url": "https://epic-fhir.mercy.net/PRDFHIRSGF/CHI/api/FHIR/R4/",
+     "name": "CHI St. Vincent"
+    }
+   ]
+  },
+  {
+   "searchName": "citths",
+   "displayName": "CITTHS",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "CITTHS",
+   "brandId": "ff2bb4f3-87fe-45d3-9fc4-081601364d4d",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/api/FHIR/R4",
+     "name": "Bigfork Valley"
+    }
+   ]
+  },
+  {
+   "searchName": "community health services, inc",
+   "displayName": "Community Health Services, Inc",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Community Health Services, Inc",
+   "brandId": "4ab83698-4740-47be-b333-ea7b55f4105f",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/CHSIMYCHART/api/FHIR/R4",
+     "name": "Community Health Services, Inc"
+    }
+   ]
+  },
+  {
+   "searchName": "family health center of marshfield",
+   "displayName": "Family Health Center of Marshfield",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Family Health Center of Marshfield",
+   "brandId": "65ad1d8e-e9af-442b-b2a0-deb90a021393",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/FAMILYHEALTHCENTER/api/FHIR/R4",
+     "name": "Family Health Center of Marshfield"
+    }
+   ]
+  },
+  {
+   "searchName": "first state infectious diseases",
+   "displayName": "First State Infectious Diseases",
+   "itemType": "brand",
+   "city": null,
+   "state": "DE",
+   "postalCode": null,
+   "brandName": "First State Infectious Diseases",
+   "brandId": "d6996fb8-000a-4179-a471-4aa88e8fa1d7",
+   "endpoints": [
+    {
+     "url": "https://epproxy.bayhealth.org/FHIR/HOME/api/FHIR/R4",
+     "name": "Bayhealth Medical Center"
+    }
+   ]
+  },
+  {
+   "searchName": "floyd valley healthcare",
+   "displayName": "Floyd Valley Healthcare",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Floyd Valley Healthcare",
+   "brandId": "eaec0f4c-6860-42aa-89c6-9d4ff20da09f",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1439.epichosted.com/FHIRProxyPRD/api/FHIR/R4",
+     "name": "Access Health"
+    }
+   ]
+  },
+  {
+   "searchName": "franciscan alliance",
+   "displayName": "Franciscan Alliance",
+   "itemType": "brand",
+   "city": null,
+   "state": "IN",
+   "postalCode": null,
+   "brandName": "Franciscan Alliance",
+   "brandId": "80f2c2de-4c8b-4ccf-aab9-993c1c2e1dbb",
+   "endpoints": [
+    {
+     "url": "https://ema.franciscanalliance.org/FHIR_PROXY/api/FHIR/R4/",
+     "name": "Franciscan Alliance"
+    }
+   ]
+  },
+  {
+   "searchName": "froedtert",
+   "displayName": "Froedtert",
+   "itemType": "brand",
+   "city": null,
+   "state": "WI",
+   "postalCode": null,
+   "brandName": "Froedtert",
+   "brandId": "14772e3d-1143-4692-941a-c7ff4cf2d226",
+   "endpoints": [
+    {
+     "url": "https://epicservicegw.froedtert.com/FHIRproxyPRD/api/FHIR/R4",
+     "name": "Froedtert"
+    }
+   ]
+  },
+  {
+   "searchName": "hoag memorial hospital presbyterian",
+   "displayName": "Hoag Memorial Hospital Presbyterian",
+   "itemType": "brand",
+   "city": null,
+   "state": "CA",
+   "postalCode": null,
+   "brandName": "Hoag Memorial Hospital Presbyterian",
+   "brandId": "9510b004-8a1c-471d-8639-5eed9c665643",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1197.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "Hoag Memorial Hospital Presbyterian"
+    }
+   ]
+  },
+  {
+   "searchName": "indian health board of minneapolis",
+   "displayName": "Indian Health Board of Minneapolis",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Indian Health Board of Minneapolis",
+   "brandId": "67be9992-5844-4971-a6d3-99009b34ed02",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/IHB/api/FHIR/R4",
+     "name": "Indian Health Board of Minneapolis"
+    }
+   ]
+  },
+  {
+   "searchName": "jefferson healthcare",
+   "displayName": "Jefferson Healthcare",
+   "itemType": "brand",
+   "city": null,
+   "state": "WA",
+   "postalCode": null,
+   "brandName": "Jefferson Healthcare",
+   "brandId": "27f77fee-0aec-4b20-8d13-6d6682887595",
+   "endpoints": [
+    {
+     "url": "https://haikuwa.providence.org/fhirproxy/api/FHIR/R4",
+     "name": "Barrett Hospital and Healthcare"
+    }
+   ]
+  },
+  {
+   "searchName": "jordan valley community health center",
+   "displayName": "Jordan Valley Community Health Center",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Jordan Valley Community Health Center",
+   "brandId": "89ce1b4e-75d2-47d2-88c1-5899c911529c",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/JORDANVALLEYMYCHART/api/FHIR/R4",
+     "name": "Jordan Valley Community Health Center"
+    }
+   ]
+  },
+  {
+   "searchName": "kahuku medical center",
+   "displayName": "Kahuku Medical Center",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Kahuku Medical Center",
+   "brandId": "704ac10e-1cb4-48be-8edb-3880784b6d83",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/KAHUKUMEDICALCENTER/api/FHIR/R4",
+     "name": "Kahuku Medical Center"
+    }
+   ]
+  },
+  {
+   "searchName": "kalamazoo college",
+   "displayName": "Kalamazoo College",
+   "itemType": "brand",
+   "city": null,
+   "state": "MI",
+   "postalCode": null,
+   "brandName": "Kalamazoo College",
+   "brandId": "8bf9972a-419c-4ae9-93e5-3365ba2c8092",
+   "endpoints": [
+    {
+     "url": "https://hygieia.bronsonhg.org/FHIRProxy/api/FHIR/R4",
+     "name": "Advanced Vascular Surgery"
+    }
+   ]
+  },
+  {
+   "searchName": "kids first pediatrics",
+   "displayName": "Kids First Pediatrics",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Kids First Pediatrics",
+   "brandId": "c95ce323-5bd6-4ec1-9318-c1c18c3a28b9",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1326.epichosted.com/FHIRProxy/MHCC/api/FHIR/R4",
+     "name": "Kids First Pediatrics"
+    }
+   ]
+  },
+  {
+   "searchName": "lagrange internal medicine",
+   "displayName": "LaGrange Internal Medicine",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "LaGrange Internal Medicine",
+   "brandId": "37c9fe1d-be35-4996-8b74-2ba537949271",
+   "endpoints": [
+    {
+     "url": "https://epicsoap.wellstar.org/fhirproxy/api/FHIR/R4",
+     "name": "LaGrange Internal Medicine"
+    }
+   ]
+  },
+  {
+   "searchName": "landmann jungman memorial hospital avera and scotland medical clinic avera",
+   "displayName": "Landmann Jungman Memorial Hospital Avera and Scotland Medical Clinic Avera",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Landmann Jungman Memorial Hospital Avera and Scotland Medical Clinic Avera",
+   "brandId": "3c2f38f4-7814-433e-9b1c-d485600cdf53",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1439.epichosted.com/FHIRProxyPRD/api/FHIR/R4",
+     "name": "Access Health"
+    }
+   ]
+  },
+  {
+   "searchName": "lawndale christian health center",
+   "displayName": "Lawndale Christian Health Center",
+   "itemType": "brand",
+   "city": null,
+   "state": "IL",
+   "postalCode": null,
+   "brandName": "Lawndale Christian Health Center",
+   "brandId": "cade592d-e3ab-45bd-b53c-26ef5d265cc7",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/MYLAWNDALE/api/FHIR/R4",
+     "name": "Lawndale Christian Health Center"
+    }
+   ]
+  },
+  {
+   "searchName": "licking memorial health system",
+   "displayName": "Licking Memorial Health System",
+   "itemType": "brand",
+   "city": null,
+   "state": "OH",
+   "postalCode": null,
+   "brandName": "Licking Memorial Health System",
+   "brandId": "57fd98c0-252a-4bca-b446-914d35b09f02",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1168.epichosted.com/FHIRProxy/LMHPRD/api/FHIR/R4",
+     "name": "Licking Memorial Health System"
+    }
+   ]
+  },
+  {
+   "searchName": "lifescape",
+   "displayName": "Lifescape",
+   "itemType": "brand",
+   "city": null,
+   "state": "SD",
+   "postalCode": null,
+   "brandName": "Lifescape",
+   "brandId": "b82f04ca-6bdb-4f8f-bb93-42d73e2ba415",
+   "endpoints": [
+    {
+     "url": "https://eprescribe.sanfordhealth.org/FHIR/api/FHIR/R4",
+     "name": "Community Memorial Hospital"
+    }
+   ]
+  },
+  {
+   "searchName": "loma linda",
+   "displayName": "Loma Linda",
+   "itemType": "brand",
+   "city": null,
+   "state": "CA",
+   "postalCode": null,
+   "brandName": "Loma Linda",
+   "brandId": "64e0415b-73f2-4629-9f52-02d3e627852f",
+   "endpoints": [
+    {
+     "url": "https://prd.lluh.org/fhir/api/FHIR/R4",
+     "name": "Loma Linda"
+    }
+   ]
+  },
+  {
+   "searchName": "madison health",
+   "displayName": "Madison Health",
+   "itemType": "brand",
+   "city": null,
+   "state": "OH",
+   "postalCode": null,
+   "brandName": "Madison Health",
+   "brandId": "3df07baa-bdde-4a63-8a28-41056d9e6f08",
+   "endpoints": [
+    {
+     "url": "https://ihismufhir.osumc.edu/fhir-prd/api/FHIR/R4",
+     "name": "Avita Health System"
+    }
+   ]
+  },
+  {
+   "searchName": "mahnomen health center",
+   "displayName": "Mahnomen Health Center",
+   "itemType": "brand",
+   "city": null,
+   "state": "MN",
+   "postalCode": null,
+   "brandName": "Mahnomen Health Center",
+   "brandId": "87a658d2-f052-4e26-8e4c-c36d200e04b8",
+   "endpoints": [
+    {
+     "url": "https://eprescribe.sanfordhealth.org/FHIR/api/FHIR/R4",
+     "name": "Community Memorial Hospital"
+    }
+   ]
+  },
+  {
+   "searchName": "mckenzie county healthcare",
+   "displayName": "McKenzie County Healthcare",
+   "itemType": "brand",
+   "city": null,
+   "state": "ND",
+   "postalCode": null,
+   "brandName": "McKenzie County Healthcare",
+   "brandId": "7a8b36e7-ee37-4645-8871-c6ecc16a3075",
+   "endpoints": [
+    {
+     "url": "https://eprescribe.sanfordhealth.org/FHIR/api/FHIR/R4",
+     "name": "Community Memorial Hospital"
+    }
+   ]
+  },
+  {
+   "searchName": "memorial health",
+   "displayName": "Memorial Health",
+   "itemType": "brand",
+   "city": null,
+   "state": "GA",
+   "postalCode": null,
+   "brandName": "Memorial Health",
+   "brandId": "33152440-8a2f-4057-ba5d-0b7c03122e95",
+   "endpoints": [
+    {
+     "url": "https://memorialhealthfhirprd.app.medcity.net/fhir-proxy/api/FHIR/R4",
+     "name": "Memorial Health"
+    }
+   ]
+  },
+  {
+   "searchName": "muckleshoot tribal health & wellness center",
+   "displayName": "Muckleshoot Tribal Health & Wellness Center",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Muckleshoot Tribal Health & Wellness Center",
+   "brandId": "0d3bd76a-7722-4c12-a22c-90ca99549119",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/api/FHIR/R4",
+     "name": "Bigfork Valley"
+    }
+   ]
+  },
+  {
+   "searchName": "nehalem bay health center",
+   "displayName": "Nehalem Bay Health Center",
+   "itemType": "brand",
+   "city": null,
+   "state": "OR",
+   "postalCode": null,
+   "brandName": "Nehalem Bay Health Center",
+   "brandId": "d8b7bdcf-15d6-490c-ac1a-291ea831d5da",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/NEHALEMBAYHEALTH/api/FHIR/R4",
+     "name": "Nehalem Bay Health Center"
+    }
+   ]
+  },
+  {
+   "searchName": "outer cape health services",
+   "displayName": "Outer Cape Health Services",
+   "itemType": "brand",
+   "city": null,
+   "state": "MA",
+   "postalCode": null,
+   "brandName": "Outer Cape Health Services",
+   "brandId": "78705c03-0bd8-4f7f-a277-15dad88e6de5",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/MYCHARTOCHS/api/FHIR/R4",
+     "name": "Outer Cape Health Services"
+    }
+   ]
+  },
+  {
+   "searchName": "owensboro",
+   "displayName": "Owensboro",
+   "itemType": "brand",
+   "city": null,
+   "state": "KY",
+   "postalCode": null,
+   "brandName": "Owensboro",
+   "brandId": "5bdfa9a7-344c-4796-b51a-48beec4c58e0",
+   "endpoints": [
+    {
+     "url": "https://fhir.omhs.org/rp-prd-fhir/api/FHIR/R4",
+     "name": "Owensboro"
+    }
+   ]
+  },
+  {
+   "searchName": "pacific medical center",
+   "displayName": "Pacific Medical Center",
+   "itemType": "brand",
+   "city": null,
+   "state": "WA",
+   "postalCode": null,
+   "brandName": "Pacific Medical Center",
+   "brandId": "cc261dff-3110-4116-b258-99a06b2b6651",
+   "endpoints": [
+    {
+     "url": "https://haikuwa.providence.org/fhirproxy/api/FHIR/R4",
+     "name": "Barrett Hospital and Healthcare"
+    }
+   ]
+  },
+  {
+   "searchName": "powers health",
+   "displayName": "Powers Health",
+   "itemType": "brand",
+   "city": null,
+   "state": "IN",
+   "postalCode": null,
+   "brandName": "Powers Health",
+   "brandId": "5c65f7c3-1e7d-495b-bce9-7e8c3883c4aa",
+   "endpoints": [
+    {
+     "url": "https://webproxy.comhs.org/FHIR/POWERS/api/FHIR/R4",
+     "name": "Powers Health"
+    }
+   ]
+  },
+  {
+   "searchName": "quartz",
+   "displayName": "Quartz",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Quartz",
+   "brandId": "c987c213-bb5e-40c0-ac49-3c7689aa485c",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.hosp.wisc.edu/FhirProxy/QUARTZ/api/FHIR/R4",
+     "name": "Quartz"
+    }
+   ]
+  },
+  {
+   "searchName": "reliant medical group",
+   "displayName": "Reliant Medical Group",
+   "itemType": "brand",
+   "city": null,
+   "state": "MA",
+   "postalCode": null,
+   "brandName": "Reliant Medical Group",
+   "brandId": "9052b2d6-fdef-437e-af82-d54d0316c6f0",
+   "endpoints": [
+    {
+     "url": "https://fhirprd.reliantmedicalgroup.org/FHIRPRD/api/FHIR/R4",
+     "name": "ProHealth Physicians"
+    }
+   ]
+  },
+  {
+   "searchName": "rocky mountain ent",
+   "displayName": "Rocky Mountain ENT",
+   "itemType": "brand",
+   "city": null,
+   "state": "MT",
+   "postalCode": null,
+   "brandName": "Rocky Mountain ENT",
+   "brandId": "9f4b93e0-494a-41bd-8211-f68bedd64a78",
+   "endpoints": [
+    {
+     "url": "https://haikuwa.providence.org/fhirproxy/api/FHIR/R4",
+     "name": "Barrett Hospital and Healthcare"
+    }
+   ]
+  },
+  {
+   "searchName": "saint luke's health system",
+   "displayName": "Saint Luke's Health System",
+   "itemType": "brand",
+   "city": null,
+   "state": "KS",
+   "postalCode": null,
+   "brandName": "Saint Luke's Health System",
+   "brandId": "d486a98b-fde2-48b0-a256-aeacd70e188b",
+   "endpoints": [
+    {
+     "url": "https://epicmobile.corp.saint-lukes.org/FHIRPROXY/api/FHIR/R4",
+     "name": "Saint Luke's Health System"
+    }
+   ]
+  },
+  {
+   "searchName": "salem clinic",
+   "displayName": "Salem Clinic",
+   "itemType": "brand",
+   "city": null,
+   "state": "OR",
+   "postalCode": null,
+   "brandName": "Salem Clinic",
+   "brandId": "6729f7da-c097-43e0-8d71-71092110c4b6",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et4001.epichosted.com/APIProxyPRD/api/FHIR/R4",
+     "name": "Drexel"
+    }
+   ]
+  },
+  {
+   "searchName": "scripps health",
+   "displayName": "Scripps Health",
+   "itemType": "brand",
+   "city": null,
+   "state": "CA",
+   "postalCode": null,
+   "brandName": "Scripps Health",
+   "brandId": "1cd9267f-7178-401e-b1f7-c5c7ccb7dff9",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et0964.epichosted.com/APIProxyPRD/api/FHIR/R4",
+     "name": "Scripps Health"
+    }
+   ]
+  },
+  {
+   "searchName": "seattle indian health board",
+   "displayName": "Seattle Indian Health Board",
+   "itemType": "brand",
+   "city": null,
+   "state": "WA",
+   "postalCode": null,
+   "brandName": "Seattle Indian Health Board",
+   "brandId": "f0908c1a-1a0e-474c-902e-24ec683304ba",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/MYCHARTSIHB/api/FHIR/R4",
+     "name": "Seattle Indian Health Board"
+    }
+   ]
+  },
+  {
+   "searchName": "sentara health",
+   "displayName": "Sentara Health",
+   "itemType": "brand",
+   "city": null,
+   "state": "VA",
+   "postalCode": null,
+   "brandName": "Sentara Health",
+   "brandId": "32b9b2ae-9534-4706-907c-ee6cfe4b7497",
+   "endpoints": [
+    {
+     "url": "https://epicfhir.sentara.com/ARR-FHIR-PRD/api/FHIR/R4",
+     "name": "Sentara Health"
+    }
+   ]
+  },
+  {
+   "searchName": "share our selves",
+   "displayName": "Share Our Selves",
+   "itemType": "brand",
+   "city": null,
+   "state": "CA",
+   "postalCode": null,
+   "brandName": "Share Our Selves",
+   "brandId": "28fec232-97e9-481f-93fc-8e6f13017253",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/MYCHARTSOS/api/FHIR/R4",
+     "name": "Share Our Selves"
+    }
+   ]
+  },
+  {
+   "searchName": "shriner's childrens",
+   "displayName": "Shriner's Childrens",
+   "itemType": "brand",
+   "city": null,
+   "state": "QC",
+   "postalCode": null,
+   "brandName": "Shriner's Childrens",
+   "brandId": "e215357b-fbf3-4e09-bfbd-f8f528c07109",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1283.epichosted.com/FHIRProxy/SHC/api/FHIR/R4",
+     "name": "Shriner's Childrens"
+    }
+   ]
+  },
+  {
+   "searchName": "sohum health",
+   "displayName": "SoHum Health",
+   "itemType": "brand",
+   "city": null,
+   "state": "CA",
+   "postalCode": null,
+   "brandName": "SoHum Health",
+   "brandId": "7390e169-0bdf-4210-958e-1962c3c5bf7e",
+   "endpoints": [
+    {
+     "url": "https://webprd.ochin.org/prd-fhir/MYCHARTSHCHD/api/FHIR/R4",
+     "name": "SoHum Health"
+    }
+   ]
+  },
+  {
+   "searchName": "st luke's",
+   "displayName": "St Luke's",
+   "itemType": "brand",
+   "city": null,
+   "state": "PA",
+   "postalCode": null,
+   "brandName": "St Luke's",
+   "brandId": "077ebcf2-af54-4de6-b8fb-623afbb90637",
+   "endpoints": [
+    {
+     "url": "https://fhir.slhn.org/fhir/api/FHIR/R4",
+     "name": "St Luke's"
+    }
+   ]
+  },
+  {
+   "searchName": "st. luke's",
+   "displayName": "St. Luke's",
+   "itemType": "brand",
+   "city": null,
+   "state": "ID",
+   "postalCode": null,
+   "brandName": "St. Luke's",
+   "brandId": "3788fc7a-9a66-442a-a8f2-af98e30a66a7",
+   "endpoints": [
+    {
+     "url": "https://epincoming.slhs.org/Interconnect-FHIR/api/FHIR/R4",
+     "name": "St. Luke's"
+    }
+   ]
+  },
+  {
+   "searchName": "starling",
+   "displayName": "Starling",
+   "itemType": "brand",
+   "city": null,
+   "state": "CT",
+   "postalCode": null,
+   "brandName": "Starling",
+   "brandId": "108db06a-17b9-46fc-baba-2ecdc8512ae5",
+   "endpoints": [
+    {
+     "url": "https://EpicProxy.hhchealth.org/FHIR/api/FHIR/R4",
+     "name": "Advanced Radiology"
+    }
+   ]
+  },
+  {
+   "searchName": "stevens community medical center",
+   "displayName": "Stevens Community Medical Center",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Stevens Community Medical Center",
+   "brandId": "f2ad1a39-53b1-42d0-b6c4-4bead404fdb2",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et0515.epichosted.com/APIProxyPRD/api/FHIR/R4",
+     "name": "Alomere Health"
+    }
+   ]
+  },
+  {
+   "searchName": "sugar land pain and spine specialists",
+   "displayName": "Sugar Land Pain and Spine Specialists",
+   "itemType": "brand",
+   "city": null,
+   "state": "TX",
+   "postalCode": null,
+   "brandName": "Sugar Land Pain and Spine Specialists",
+   "brandId": "3d3bcd06-b87c-4cfa-8039-3c17ecfc2b96",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1326.epichosted.com/FHIRProxy/MHCC/api/FHIR/R4",
+     "name": "Sugar Land Pain and Spine Specialists"
+    }
+   ]
+  },
+  {
+   "searchName": "uc san diego",
+   "displayName": "UC San Diego",
+   "itemType": "brand",
+   "city": null,
+   "state": "CA",
+   "postalCode": null,
+   "brandName": "UC San Diego",
+   "brandId": "555045a3-5bae-41c4-b896-82c8409c6808",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et0502.epichosted.com/FhirProxy/UCSD/api/FHIR/R4",
+     "name": "UC San Diego"
+    }
+   ]
+  },
+  {
+   "searchName": "und center for family medicine",
+   "displayName": "UND Center for Family Medicine",
+   "itemType": "brand",
+   "city": null,
+   "state": "ND",
+   "postalCode": null,
+   "brandName": "UND Center for Family Medicine",
+   "brandId": "be7cf6ed-44b0-4113-b519-bb900b28e437",
+   "endpoints": [
+    {
+     "url": "https://eprescribe.sanfordhealth.org/FHIR/api/FHIR/R4",
+     "name": "Community Memorial Hospital"
+    }
+   ]
+  },
+  {
+   "searchName": "university clinical health",
+   "displayName": "University Clinical Health",
+   "itemType": "brand",
+   "city": null,
+   "state": "TN",
+   "postalCode": null,
+   "brandName": "University Clinical Health",
+   "brandId": "7981a82c-ab46-4965-bb44-25943c3a2bca",
+   "endpoints": [
+    {
+     "url": "https://rxedi.bmhcc.org/prd-fhir/api/FHIR/R4/",
+     "name": "Baptist Memorial Health Care"
+    }
+   ]
+  },
+  {
+   "searchName": "university of utah",
+   "displayName": "University of Utah",
+   "itemType": "brand",
+   "city": null,
+   "state": "UT",
+   "postalCode": null,
+   "brandName": "University of Utah",
+   "brandId": "76861b1f-6762-4972-a283-b08ed1f93f8f",
+   "endpoints": [
+    {
+     "url": "https://webproxyprd.med.utah.edu/FHIRMyChart/api/FHIR/R4",
+     "name": "Carson Tahoe"
+    }
+   ]
+  },
+  {
+   "searchName": "uw medicine",
+   "displayName": "UW Medicine",
+   "itemType": "brand",
+   "city": null,
+   "state": "WA",
+   "postalCode": null,
+   "brandName": "UW Medicine",
+   "brandId": "68ff3f69-42cc-4cb7-9dad-1e9cd768e413",
+   "endpoints": [
+    {
+     "url": "https://fhir.epic.medical.washington.edu/FHIR-Proxy/UWM/api/FHIR/R4",
+     "name": "UW Medicine"
+    }
+   ]
+  },
+  {
+   "searchName": "vivo pharmacy",
+   "displayName": "Vivo Pharmacy",
+   "itemType": "brand",
+   "city": null,
+   "state": null,
+   "postalCode": null,
+   "brandName": "Vivo Pharmacy",
+   "brandId": "8e2c5e7d-27d3-404e-896e-fe35f67e4269",
+   "endpoints": [
+    {
+     "url": "https://call.api.northwell.io/epic-proxy/api/FHIR/R4",
+     "name": "Vivo Pharmacy"
+    }
+   ]
+  },
+  {
+   "searchName": "west tennessee healthcare",
+   "displayName": "West Tennessee Healthcare",
+   "itemType": "brand",
+   "city": null,
+   "state": "TN",
+   "postalCode": null,
+   "brandName": "West Tennessee Healthcare",
+   "brandId": "7f108326-1ebf-4e98-bad7-7de320007779",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1243.epichosted.com/OAuth2-PRD/api/FHIR/R4",
+     "name": "West Tennessee Healthcare"
+    }
+   ]
+  },
+  {
+   "searchName": "winmind behavioral health & addiction medicine",
+   "displayName": "Winmind Behavioral Health & Addiction Medicine",
+   "itemType": "brand",
+   "city": null,
+   "state": "FL",
+   "postalCode": null,
+   "brandName": "Winmind Behavioral Health & Addiction Medicine",
+   "brandId": "8eeb6e48-e70a-4efb-9591-169aeae7e078",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1233.epichosted.com/FHIRProxy/AFFILIATE/api/FHIR/R4",
+     "name": "Winmind Behavioral Health & Addiction Medicine"
+    }
+   ]
+  },
+  {
+   "searchName": "ach south blvd tampa",
+   "displayName": "ACH SOUTH BLVD TAMPA",
+   "itemType": "facility",
+   "city": "Tampa",
+   "state": "FL",
+   "postalCode": "33606-2629",
+   "brandName": "Johns Hopkins Medicine",
+   "brandId": "18fa91c2-c87c-4309-9425-d7551cb15923",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et0842.epichosted.com/FHIRProxyPRD/api/FHIR/R4",
+     "name": "Johns Hopkins Medicine"
+    }
+   ]
+  },
+  {
+   "searchName": "advanced gastroenterology institute",
+   "displayName": "Advanced Gastroenterology Institute",
+   "itemType": "facility",
+   "city": null,
+   "state": null,
+   "postalCode": "32137",
+   "brandName": "Florida Health Care Plans",
+   "brandId": "48536958-ca23-49d4-baa9-f1e9d26cbc9d",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1359.epichosted.com/FHIRProxyPRD/api/FHIR/R4",
+     "name": "Florida Health Care Plans"
+    }
+   ]
+  },
+  {
+   "searchName": "adventhealth east florida",
+   "displayName": "AdventHealth East Florida",
+   "itemType": "facility",
+   "city": null,
+   "state": null,
+   "postalCode": "32174",
+   "brandName": "AdventHealth",
+   "brandId": "e6b69077-5f2c-4295-a33a-928ae3362ec3",
+   "endpoints": [
+    {
+     "url": "https://mobile.adventhealth.com/oauth2-PRD/api/FHIR/R4",
+     "name": "AdventHealth"
+    }
+   ]
+  },
+  {
+   "searchName": "adventhealth ottawa",
+   "displayName": "ADVENTHEALTH OTTAWA",
+   "itemType": "facility",
+   "city": "Ottawa",
+   "state": "KS",
+   "postalCode": "66067",
+   "brandName": "AdventHealth",
+   "brandId": "e6b69077-5f2c-4295-a33a-928ae3362ec3",
+   "endpoints": [
+    {
+     "url": "https://mobile.adventhealth.com/oauth2-PRD/api/FHIR/R4",
+     "name": "AdventHealth"
+    }
+   ]
+  },
+  {
+   "searchName": "al elbendary md",
+   "displayName": "Al Elbendary MD",
+   "itemType": "facility",
+   "city": null,
+   "state": null,
+   "postalCode": "63301",
+   "brandName": "BJC Healthcare & Washington University",
+   "brandId": "6c72571e-306b-4e89-b7f0-4b577dbbc5cc",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et0965.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "BJC Healthcare & Washington University"
+    }
+   ]
+  },
+  {
+   "searchName": "alameda pediatrics",
+   "displayName": "Alameda Pediatrics",
+   "itemType": "facility",
+   "city": "Alameda",
+   "state": "CA",
+   "postalCode": "94501",
+   "brandName": "Stanford",
+   "brandId": "4be5d7d1-9948-4932-a7f4-ba3be9fc6d4a",
+   "endpoints": [
+    {
+     "url": "https://sfd.stanfordmed.org/FHIR/api/FHIR/R4",
+     "name": "Stanford"
+    }
+   ]
+  },
+  {
+   "searchName": "alaska regional my health",
+   "displayName": "Alaska Regional My Health",
+   "itemType": "facility",
+   "city": "ANCHORAGE",
+   "state": "AK",
+   "postalCode": "99507-3805",
+   "brandName": "HCA",
+   "brandId": "93de1581-fca3-4a70-a234-abd29d613a09",
+   "endpoints": [
+    {
+     "url": "https://mountainstarhealthfhirprd.app.medcity.net/fhir-proxy/api/FHIR/R4",
+     "name": "Alaska Regional Hospital"
+    }
+   ]
+  },
+  {
+   "searchName": "aloha allergy immunology llc",
+   "displayName": "ALOHA ALLERGY IMMUNOLOGY LLC",
+   "itemType": "facility",
+   "city": "HONOLULU",
+   "state": "HI",
+   "postalCode": "96813-2431",
+   "brandName": "The Queen's Health System",
+   "brandId": "fe6f96a5-63c9-4823-a879-6083f720a33d",
+   "endpoints": [
+    {
+     "url": "https://mobileapps.queens.org/FHIR/MYCHART/api/FHIR/R4",
+     "name": "Queen's Connect"
+    }
+   ]
+  },
+  {
+   "searchName": "baptist health lexington medical group pikeville",
+   "displayName": "Baptist Health Lexington Medical Group Pikeville",
+   "itemType": "facility",
+   "city": "Pikeville",
+   "state": "KY",
+   "postalCode": "41501",
+   "brandName": "Baptist Healthcare",
+   "brandId": "341358d2-ed26-41bc-8ed2-0cb912bcbed6",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.bhsi.com/PRD-FHIR/BHSI/api/FHIR/R4",
+     "name": "Baptist Healthcare"
+    }
+   ]
+  },
+  {
+   "searchName": "baptist health pediatric clinic fort smith",
+   "displayName": "BAPTIST HEALTH PEDIATRIC CLINIC FORT SMITH",
+   "itemType": "facility",
+   "city": "Fort Smith",
+   "state": "AR",
+   "postalCode": "72901",
+   "brandName": "Baptist Health",
+   "brandId": "7f0f5c99-77bf-42df-a88c-642da69b46db",
+   "endpoints": [
+    {
+     "url": "https://api.baptist-health.org/Interconnect-FHIR/api/FHIR/R4",
+     "name": "Baptist Health"
+    }
+   ]
+  },
+  {
+   "searchName": "bbh cahaba valley",
+   "displayName": "BBH Cahaba Valley",
+   "itemType": "facility",
+   "city": "Pelham",
+   "state": "AL",
+   "postalCode": "35124",
+   "brandName": "Brookwood Baptist Health",
+   "brandId": "602dca60-3147-489a-8238-90e24085a50b",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.bhsala.com/FHIRProxy/HOME/api/FHIR/R4",
+     "name": "Brookwood Baptist Health"
+    }
+   ]
+  },
+  {
+   "searchName": "bluhawk dental group",
+   "displayName": "BluHawk Dental Group",
+   "itemType": "facility",
+   "city": "Overland Park",
+   "state": "KS",
+   "postalCode": "66085",
+   "brandName": "Smile Generation MyChart",
+   "brandId": "123ede49-0282-4ef5-a5e9-bf69ad89a105",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1079.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "Smile Generation MyChart"
+    }
+   ]
+  },
+  {
+   "searchName": "brightmark health",
+   "displayName": "Brightmark Health",
+   "itemType": "facility",
+   "city": "Birmingham",
+   "state": "AL",
+   "postalCode": "35226-3925",
+   "brandName": "Brookwood Baptist Health",
+   "brandId": "602dca60-3147-489a-8238-90e24085a50b",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.bhsala.com/FHIRProxy/HOME/api/FHIR/R4",
+     "name": "Brookwood Baptist Health"
+    }
+   ]
+  },
+  {
+   "searchName": "carle maternal fetal medicine bloomington",
+   "displayName": "CARLE MATERNAL FETAL MEDICINE BLOOMINGTON",
+   "itemType": "facility",
+   "city": "Bloomington",
+   "state": "IL",
+   "postalCode": "61704",
+   "brandName": "Carle",
+   "brandId": "b686a186-cd36-498c-bf9e-26087c7637e8",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et0316.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "Carle"
+    }
+   ]
+  },
+  {
+   "searchName": "central clinic for women pa",
+   "displayName": "CENTRAL CLINIC FOR WOMEN PA",
+   "itemType": "facility",
+   "city": "Little Rock",
+   "state": "AR",
+   "postalCode": "72205",
+   "brandName": "Baptist Health",
+   "brandId": "7f0f5c99-77bf-42df-a88c-642da69b46db",
+   "endpoints": [
+    {
+     "url": "https://api.baptist-health.org/Interconnect-FHIR/api/FHIR/R4",
+     "name": "Baptist Health"
+    }
+   ]
+  },
+  {
+   "searchName": "cmg - m street",
+   "displayName": "CMG - M Street",
+   "itemType": "facility",
+   "city": "Washington",
+   "state": "DC",
+   "postalCode": "20037-1434",
+   "brandName": "Capital Medical Group",
+   "brandId": "4e48421d-b014-410a-95a8-1a768ff08806",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1222.epichosted.com/FHIRProxy/api/FHIR/R4/",
+     "name": "Capital Medical Group"
+    }
+   ]
+  },
+  {
+   "searchName": "cmg primary care- mcpherson square",
+   "displayName": "CMG Primary Care- McPherson Square",
+   "itemType": "facility",
+   "city": "Washington",
+   "state": "DC",
+   "postalCode": "20005-5002",
+   "brandName": "Capital Medical Group",
+   "brandId": "4e48421d-b014-410a-95a8-1a768ff08806",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1222.epichosted.com/FHIRProxy/api/FHIR/R4/",
+     "name": "Capital Medical Group"
+    }
+   ]
+  },
+  {
+   "searchName": "commonspirit internal medicine siena",
+   "displayName": "CommonSpirit Internal Medicine Siena",
+   "itemType": "facility",
+   "city": "Garden City",
+   "state": "KS",
+   "postalCode": "67846",
+   "brandName": "CommonSpirit Mountain Region",
+   "brandId": "f1721752-0ae8-41bd-8676-d721822f8f38",
+   "endpoints": [
+    {
+     "url": "https://epic-p-foreground.centura.org/prd-fhir/api/FHIR/R4",
+     "name": "CommonSpirit Mountain Region"
+    }
+   ]
+  },
+  {
+   "searchName": "complete concierge care at sibley memorial hospital",
+   "displayName": "Complete Concierge Care at Sibley Memorial Hospital",
+   "itemType": "facility",
+   "city": "WASHINGTON",
+   "state": "DC",
+   "postalCode": "20016-2618",
+   "brandName": "Johns Hopkins Medicine",
+   "brandId": "18fa91c2-c87c-4309-9425-d7551cb15923",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et0842.epichosted.com/FHIRProxyPRD/api/FHIR/R4",
+     "name": "Johns Hopkins Medicine"
+    }
+   ]
+  },
+  {
+   "searchName": "cotton o'neil wamego",
+   "displayName": "COTTON O'NEIL WAMEGO",
+   "itemType": "facility",
+   "city": "WAMEGO",
+   "state": "KS",
+   "postalCode": "66547-9690",
+   "brandName": "Stormont Vail Health Care",
+   "brandId": "c828dd13-5bba-4cc6-a593-fb7d9cf2fbcc",
+   "endpoints": [
+    {
+     "url": "https://epicsoap.stormontvail.org/FHIRproxy/HOME/api/FHIR/R4",
+     "name": "Stormont Vail Health Care"
+    }
+   ]
+  },
+  {
+   "searchName": "culicchia neurological clinic - marrero",
+   "displayName": "CULICCHIA NEUROLOGICAL CLINIC - Marrero",
+   "itemType": "facility",
+   "city": "MARRERO",
+   "state": "LA",
+   "postalCode": "70072-3084",
+   "brandName": "LCMC Health",
+   "brandId": "a3792191-e404-47be-acb3-de7fc01c8e68",
+   "endpoints": [
+    {
+     "url": "https://interconnect.lcmchealth.org/FHIR/LCMC/api/FHIR/R4",
+     "name": "Children's Heart Clinic of LA"
+    }
+   ]
+  },
+  {
+   "searchName": "cvs/minuteclinic - fayetteville",
+   "displayName": "CVS/minuteclinic - Fayetteville",
+   "itemType": "facility",
+   "city": "Fayetteville",
+   "state": "AR",
+   "postalCode": "72703",
+   "brandName": "Minute Clinic",
+   "brandId": "af69e34b-bbe9-4d3b-80ca-214796f360d0",
+   "endpoints": [
+    {
+     "url": "https://retailepicfhir.cvshealth.com/FhirProxy/api/FHIR/R4",
+     "name": "Minute Clinic"
+    }
+   ]
+  },
+  {
+   "searchName": "cvs/oak street - il hermosa",
+   "displayName": "CVS/Oak Street - IL HERMOSA",
+   "itemType": "facility",
+   "city": "Chicago",
+   "state": "IL",
+   "postalCode": "60639-1923",
+   "brandName": "Minute Clinic",
+   "brandId": "af69e34b-bbe9-4d3b-80ca-214796f360d0",
+   "endpoints": [
+    {
+     "url": "https://retailepicfhir.cvshealth.com/FhirProxy/api/FHIR/R4",
+     "name": "Minute Clinic"
+    }
+   ]
+  },
+  {
+   "searchName": "cvs/oak street - la terrytown",
+   "displayName": "CVS/Oak Street - LA TERRYTOWN",
+   "itemType": "facility",
+   "city": "Gretna",
+   "state": "LA",
+   "postalCode": "70056-4300",
+   "brandName": "Minute Clinic",
+   "brandId": "af69e34b-bbe9-4d3b-80ca-214796f360d0",
+   "endpoints": [
+    {
+     "url": "https://retailepicfhir.cvshealth.com/FhirProxy/api/FHIR/R4",
+     "name": "Minute Clinic"
+    }
+   ]
+  },
+  {
+   "searchName": "dedicated to women obgyn rehoboth",
+   "displayName": "Dedicated to Women OBGYN Rehoboth",
+   "itemType": "facility",
+   "city": "REHOBOTH",
+   "state": "DE",
+   "postalCode": "19971",
+   "brandName": "Dedicated to Women",
+   "brandId": "158f59a6-8479-40f4-a437-28ab1301c285",
+   "endpoints": [
+    {
+     "url": "https://epproxy.bayhealth.org/FHIR/HOME/api/FHIR/R4",
+     "name": "Bayhealth Medical Center"
+    }
+   ]
+  },
+  {
+   "searchName": "fair haven community health center - new haven",
+   "displayName": "Fair Haven Community Health Center - New Haven",
+   "itemType": "facility",
+   "city": "NEW HAVEN",
+   "state": "CT",
+   "postalCode": "06513-3733",
+   "brandName": "Yale New Haven Health/Yale Medical Group",
+   "brandId": "43af23c4-a317-47fb-b5d8-63049e37216c",
+   "endpoints": [
+    {
+     "url": "https://patientfhirapis.ynhh.org/PFF/api/FHIR/R4",
+     "name": "Yale New Haven Health/Yale Medical Group"
+    }
+   ]
+  },
+  {
+   "searchName": "hawai'i island chc kalanianaole elementary and intermediate school",
+   "displayName": "Hawai'i Island CHC Kalanianaole Elementary and Intermediate School",
+   "itemType": "facility",
+   "city": "Papaikou",
+   "state": "HI",
+   "postalCode": "96781-7737",
+   "brandName": "Community Health of South Florida",
+   "brandId": "eba1811c-e5c8-4bb8-a50e-aed17e7e6494",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1256.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "Beloved Community Family Wellness Center"
+    }
+   ]
+  },
+  {
+   "searchName": "hawaii kidney specialists hilo office",
+   "displayName": "Hawaii Kidney Specialists Hilo Office",
+   "itemType": "facility",
+   "city": "HILO",
+   "state": "HI",
+   "postalCode": "96720-3074",
+   "brandName": "Acumen Physician Solutions",
+   "brandId": "50b23ec8-bac7-4a64-8211-aa147c2b1a58",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1041.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "Acumen Physician Solutions"
+    }
+   ]
+  },
+  {
+   "searchName": "home care plus - guilford",
+   "displayName": "Home Care Plus - Guilford",
+   "itemType": "facility",
+   "city": "GUILFORD",
+   "state": "CT",
+   "postalCode": "06437-2749",
+   "brandName": "Yale New Haven Health/Yale Medical Group",
+   "brandId": "43af23c4-a317-47fb-b5d8-63049e37216c",
+   "endpoints": [
+    {
+     "url": "https://patientfhirapis.ynhh.org/PFF/api/FHIR/R4",
+     "name": "Yale New Haven Health/Yale Medical Group"
+    }
+   ]
+  },
+  {
+   "searchName": "honorhealth - women's heart health",
+   "displayName": "HonorHealth - Women's Heart Health",
+   "itemType": "facility",
+   "city": "Scottsdale",
+   "state": "AZ",
+   "postalCode": "85260",
+   "brandName": "Honor Health",
+   "brandId": "81a13344-7c78-4834-9d08-aa3d35330dc3",
+   "endpoints": [
+    {
+     "url": "https://interconnect.honorhealth.com/Interconnect-FHIR-PRD/api/FHIR/R4/",
+     "name": "Honor Health"
+    }
+   ]
+  },
+  {
+   "searchName": "honorhealth heart care - cardiac arrhythmia  - east mesa",
+   "displayName": "HonorHealth Heart Care - Cardiac Arrhythmia  - East Mesa",
+   "itemType": "facility",
+   "city": "MESA",
+   "state": "AZ",
+   "postalCode": "85209",
+   "brandName": "Honor Health",
+   "brandId": "81a13344-7c78-4834-9d08-aa3d35330dc3",
+   "endpoints": [
+    {
+     "url": "https://interconnect.honorhealth.com/Interconnect-FHIR-PRD/api/FHIR/R4/",
+     "name": "Honor Health"
+    }
+   ]
+  },
+  {
+   "searchName": "honorhealth occupational health medicine - tempe - mill ave",
+   "displayName": "HonorHealth Occupational Health Medicine - Tempe - Mill Ave",
+   "itemType": "facility",
+   "city": "tempe",
+   "state": "AZ",
+   "postalCode": "85282",
+   "brandName": "Honor Health",
+   "brandId": "81a13344-7c78-4834-9d08-aa3d35330dc3",
+   "endpoints": [
+    {
+     "url": "https://interconnect.honorhealth.com/Interconnect-FHIR-PRD/api/FHIR/R4/",
+     "name": "Honor Health"
+    }
+   ]
+  },
+  {
+   "searchName": "imc neurosurgery tmc",
+   "displayName": "IMC NEUROSURGERY TMC",
+   "itemType": "facility",
+   "city": "DAPHNE",
+   "state": "AL",
+   "postalCode": "36526-4702",
+   "brandName": "Infirmary",
+   "brandId": "db55f90e-37fc-4ff2-8b97-7c5ab153b1e4",
+   "endpoints": [
+    {
+     "url": "https://ssproxyprod.infirmaryhealth.org/epicFHIR/MYCPRD/api/FHIR/R4",
+     "name": "Infirmary"
+    }
+   ]
+  },
+  {
+   "searchName": "indiana nephrology and internal medicine, p.c. st v carmel",
+   "displayName": "Indiana Nephrology And Internal Medicine, P.C. ST V Carmel",
+   "itemType": "facility",
+   "city": "CARMEL",
+   "state": "IN",
+   "postalCode": "46032-1484",
+   "brandName": "Acumen Physician Solutions",
+   "brandId": "50b23ec8-bac7-4a64-8211-aa147c2b1a58",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1041.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "Acumen Physician Solutions"
+    }
+   ]
+  },
+  {
+   "searchName": "jiva health - pinole",
+   "displayName": "Jiva Health - Pinole",
+   "itemType": "facility",
+   "city": "PINOLE",
+   "state": "CA",
+   "postalCode": "94564",
+   "brandName": "Hill Physicians Medical Group",
+   "brandId": "bea21f1e-32cd-4b8a-8fcb-5695997153f9",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1013.epichosted.com/FHIRProxy/MYCHART/api/FHIR/R4",
+     "name": "Hill Physicians Medical Group"
+    }
+   ]
+  },
+  {
+   "searchName": "june nylen cancer center sioux city",
+   "displayName": "JUNE NYLEN CANCER CENTER SIOUX CITY",
+   "itemType": "facility",
+   "city": "SIOUX CITY",
+   "state": "IA",
+   "postalCode": "51101",
+   "brandName": "The Nebraska Medical Center",
+   "brandId": "8a6b49d9-7c36-456e-8941-74a514db6903",
+   "endpoints": [
+    {
+     "url": "https://ocsoapprd.nebraskamed.com/FHIR-PRD/HOME/api/FHIR/R4",
+     "name": "OneChart"
+    }
+   ]
+  },
+  {
+   "searchName": "kaiser permanente hawaii -  moanalua medical center",
+   "displayName": "Kaiser Permanente Hawaii -  Moanalua Medical Center",
+   "itemType": "facility",
+   "city": "Honolulu",
+   "state": "HI",
+   "postalCode": "96819",
+   "brandName": "Kaiser Permanente - Hawaii",
+   "brandId": "25951418-14f2-4281-b3a6-98988d59a3dd",
+   "endpoints": [
+    {
+     "url": "https://fhir.kp.org/service/ptnt_care/EpicEdiFhirRoutingSvc/v2014/esb-envlbl/130/api/FHIR/R4/",
+     "name": "Kaiser Permanente - Hawaii"
+    }
+   ]
+  },
+  {
+   "searchName": "lomita 3440 tor csmg",
+   "displayName": "Lomita 3440 TOR CSMG",
+   "itemType": "facility",
+   "city": "Torrance",
+   "state": "CA",
+   "postalCode": "90505-4803",
+   "brandName": "Cedars-Sinai",
+   "brandId": "e09f8cb7-0ead-4fa1-9c59-90c4352ffc04",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et0612.epichosted.com/APIProxyPRD/api/FHIR/R4",
+     "name": "Cedars-Sinai"
+    }
+   ]
+  },
+  {
+   "searchName": "mercycare occupational health",
+   "displayName": "MercyCare Occupational Health",
+   "itemType": "facility",
+   "city": "Cedar Rapids",
+   "state": "IA",
+   "postalCode": "52402",
+   "brandName": "Mercy Medical Center",
+   "brandId": "36fb9a8a-7eac-4edf-ad88-718c9423c35c",
+   "endpoints": [
+    {
+     "url": "https://eproxy.mercycare.org/oauth2/api/FHIR/R4/",
+     "name": "Mercy Medical Center"
+    }
+   ]
+  },
+  {
+   "searchName": "mercyone genesis davenport west medical center parent location",
+   "displayName": "MercyOne Genesis Davenport West Medical Center Parent Location",
+   "itemType": "facility",
+   "city": "Davenport",
+   "state": "IA",
+   "postalCode": "52804-1707",
+   "brandName": "Trinity Health",
+   "brandId": "fd5eabfe-4f02-4c98-8cc5-85152d703e36",
+   "endpoints": [
+    {
+     "url": "https://epic-ext.trinity-health.org/FHIR/api/FHIR/R4",
+     "name": "Trinity Health"
+    }
+   ]
+  },
+  {
+   "searchName": "morrell internal med",
+   "displayName": "MORRELL INTERNAL MED",
+   "itemType": "facility",
+   "city": "Lakeland",
+   "state": "FL",
+   "postalCode": "33805-4771",
+   "brandName": "Lakeland Regional Health",
+   "brandId": "20701e26-e3ad-4152-8d7f-a9436ebff371",
+   "endpoints": [
+    {
+     "url": "https://epicapp.mylrh.org/OAuth2/LRH/api/FHIR/R4",
+     "name": "Lakeland Regional Health"
+    }
+   ]
+  },
+  {
+   "searchName": "mpg peds wes ortho",
+   "displayName": "MPG PEDS WES ORTHO",
+   "itemType": "facility",
+   "city": "WESTON",
+   "state": "FL",
+   "postalCode": "33326",
+   "brandName": "Memorial Healthcare System",
+   "brandId": "0f2135fb-c2a6-4b31-87d4-b64a08eb6077",
+   "endpoints": [
+    {
+     "url": "https://mhssp.mhs.net/fhir/api/FHIR/R4",
+     "name": "Communitycare PLAN"
+    }
+   ]
+  },
+  {
+   "searchName": "national jewish health (njh)",
+   "displayName": "NATIONAL JEWISH HEALTH (NJH)",
+   "itemType": "facility",
+   "city": "Denver",
+   "state": "CO",
+   "postalCode": "80206",
+   "brandName": "National Jewish Health",
+   "brandId": "e56391ff-88c7-4fd9-a25c-72e0be7839e9",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et0645.epichosted.com/FHIRProxyPRD/api/FHIR/R4",
+     "name": "Billings OBGYN"
+    }
+   ]
+  },
+  {
+   "searchName": "north oaks occupational health services clinic",
+   "displayName": "North Oaks Occupational Health Services Clinic",
+   "itemType": "facility",
+   "city": "Hammond",
+   "state": "LA",
+   "postalCode": "70403",
+   "brandName": "North Oaks Health System",
+   "brandId": "fc84953b-2cbc-45a5-8abf-9c360d5fb14a",
+   "endpoints": [
+    {
+     "url": "https://soapproxyprd.northoaks.org/NOHSFHIR/NOHS/api/FHIR/R4",
+     "name": "North Oaks Health System"
+    }
+   ]
+  },
+  {
+   "searchName": "northern colorado pain management",
+   "displayName": "Northern Colorado Pain Management",
+   "itemType": "facility",
+   "city": "GREELEY",
+   "state": "CO",
+   "postalCode": "80634",
+   "brandName": "UCHealth",
+   "brandId": "95d6bc1c-8a46-481a-ae1b-1a1d1fdba84d",
+   "endpoints": [
+    {
+     "url": "https://ss.uch.edu/FHIRProxy/MHC/api/FHIR/R4",
+     "name": "UCHealth"
+    }
+   ]
+  },
+  {
+   "searchName": "ochsner university clinics",
+   "displayName": "Ochsner University Clinics",
+   "itemType": "facility",
+   "city": "Lafayette",
+   "state": "LA",
+   "postalCode": "70506-4205",
+   "brandName": "Ochsner Health System",
+   "brandId": "8de10c85-efda-4f6e-92b1-f42c71f82729",
+   "endpoints": [
+    {
+     "url": "https://myc.ochsner.org/FHIR/api/FHIR/R4",
+     "name": "Ochsner Health System"
+    }
+   ]
+  },
+  {
+   "searchName": "oh hem&onc ohio county",
+   "displayName": "OH HEM&ONC OHIO COUNTY",
+   "itemType": "facility",
+   "city": "BEAVER DAM",
+   "state": "KY",
+   "postalCode": "42320-8955",
+   "brandName": "Owensboro",
+   "brandId": "5bdfa9a7-344c-4796-b51a-48beec4c58e0",
+   "endpoints": [
+    {
+     "url": "https://fhir.omhs.org/rp-prd-fhir/api/FHIR/R4",
+     "name": "Owensboro"
+    }
+   ]
+  },
+  {
+   "searchName": "orlando health physician associates grant street",
+   "displayName": "Orlando Health Physician Associates Grant Street",
+   "itemType": "facility",
+   "city": "ORLANDO",
+   "state": "FL",
+   "postalCode": "32822",
+   "brandName": "Orlando Health",
+   "brandId": "9a6b4520-a671-429f-af53-7c2d355ba375",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1131.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "Baptist Health"
+    }
+   ]
+  },
+  {
+   "searchName": "orthopedic associates of hartford",
+   "displayName": "Orthopedic Associates of Hartford",
+   "itemType": "facility",
+   "city": "Farmington",
+   "state": "CT",
+   "postalCode": "06032-1943",
+   "brandName": "Orthopedic Associates of Hartford",
+   "brandId": "2890514c-661c-4445-b50a-6b57365662ac",
+   "endpoints": [
+    {
+     "url": "https://EpicProxy.hhchealth.org/FHIR/api/FHIR/R4",
+     "name": "Advanced Radiology"
+    }
+   ]
+  },
+  {
+   "searchName": "penn medicine - newark, de - 1101 twin c lane",
+   "displayName": "Penn Medicine - Newark, DE - 1101 Twin C Lane",
+   "itemType": "facility",
+   "city": "Newark",
+   "state": "DE",
+   "postalCode": "19713-1005",
+   "brandName": "Penn Medicine",
+   "brandId": "88e9a9f8-5de2-4b4d-80ac-b05acbc45704",
+   "endpoints": [
+    {
+     "url": "https://ssproxy.pennhealth.com/PRD-FHIR/api/FHIR/R4",
+     "name": "Penn Medicine"
+    }
+   ]
+  },
+  {
+   "searchName": "personalized physicians group, ltd affiliate of northwestern medicine",
+   "displayName": "Personalized Physicians Group, LTD Affiliate of Northwestern Medicine",
+   "itemType": "facility",
+   "city": "WHEATON",
+   "state": "IL",
+   "postalCode": "60189-2037",
+   "brandName": "Northwestern Medicine",
+   "brandId": "6ceb4bb0-66d4-48e1-a599-9aa16e9deaa9",
+   "endpoints": [
+    {
+     "url": "https://nmepicproxy.nm.org/FHIR-PRD/api/FHIR/R4",
+     "name": "Northwestern Medicine"
+    }
+   ]
+  },
+  {
+   "searchName": "powers health medical group - general surgery",
+   "displayName": "Powers Health Medical Group - General Surgery",
+   "itemType": "facility",
+   "city": "Valparaiso",
+   "state": "IN",
+   "postalCode": "46383-3986",
+   "brandName": "Powers Health",
+   "brandId": "5c65f7c3-1e7d-495b-bce9-7e8c3883c4aa",
+   "endpoints": [
+    {
+     "url": "https://webproxy.comhs.org/FHIR/POWERS/api/FHIR/R4",
+     "name": "Powers Health"
+    }
+   ]
+  },
+  {
+   "searchName": "powers health medical group - neurology",
+   "displayName": "Powers Health Medical Group - Neurology",
+   "itemType": "facility",
+   "city": "Munster",
+   "state": "IN",
+   "postalCode": "46321-2919",
+   "brandName": "Powers Health",
+   "brandId": "5c65f7c3-1e7d-495b-bce9-7e8c3883c4aa",
+   "endpoints": [
+    {
+     "url": "https://webproxy.comhs.org/FHIR/POWERS/api/FHIR/R4",
+     "name": "Powers Health"
+    }
+   ]
+  },
+  {
+   "searchName": "precision sports med and ortho lincoln",
+   "displayName": "Precision Sports Med and Ortho Lincoln",
+   "itemType": "facility",
+   "city": "Lincoln",
+   "state": "AL",
+   "postalCode": "35096-6748",
+   "brandName": "Brookwood Baptist Health",
+   "brandId": "602dca60-3147-489a-8238-90e24085a50b",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.bhsala.com/FHIRProxy/HOME/api/FHIR/R4",
+     "name": "Brookwood Baptist Health"
+    }
+   ]
+  },
+  {
+   "searchName": "premier surgeons",
+   "displayName": "Premier Surgeons",
+   "itemType": "facility",
+   "city": "Littleton",
+   "state": "CO",
+   "postalCode": "80122",
+   "brandName": "AdventHealth",
+   "brandId": "e6b69077-5f2c-4295-a33a-928ae3362ec3",
+   "endpoints": [
+    {
+     "url": "https://mobile.adventhealth.com/oauth2-PRD/api/FHIR/R4",
+     "name": "AdventHealth"
+    }
+   ]
+  },
+  {
+   "searchName": "providence alaska extended care",
+   "displayName": "Providence Alaska Extended Care",
+   "itemType": "facility",
+   "city": "ANCHORAGE",
+   "state": "AK",
+   "postalCode": "99504",
+   "brandName": "Providence Health & Services",
+   "brandId": "9a1f151d-7e8d-4ec4-9d21-e8ebff36924d",
+   "endpoints": [
+    {
+     "url": "https://haikuak.providence.org/fhirproxy/api/FHIR/R4",
+     "name": "Alaska Neurology Center"
+    }
+   ]
+  },
+  {
+   "searchName": "providence mat-su behavioral health",
+   "displayName": "Providence Mat-Su Behavioral Health",
+   "itemType": "facility",
+   "city": "PALMER",
+   "state": "AK",
+   "postalCode": "99645",
+   "brandName": "Providence Health & Services",
+   "brandId": "9a1f151d-7e8d-4ec4-9d21-e8ebff36924d",
+   "endpoints": [
+    {
+     "url": "https://haikuak.providence.org/fhirproxy/api/FHIR/R4",
+     "name": "Alaska Neurology Center"
+    }
+   ]
+  },
+  {
+   "searchName": "providence st jude medical center (fullerton)",
+   "displayName": "Providence St Jude Medical Center (Fullerton)",
+   "itemType": "facility",
+   "city": "Fullerton",
+   "state": "CA",
+   "postalCode": "92835",
+   "brandName": "Providence Health & Services",
+   "brandId": "d99d09bb-45ff-4328-862c-cd0fbb3a9487",
+   "endpoints": [
+    {
+     "url": "https://haikuor.providence.org/fhirproxy/api/FHIR/R4",
+     "name": "Columbia Gorge Family Medicine"
+    }
+   ]
+  },
+  {
+   "searchName": "reunion smiles dentistry",
+   "displayName": "Reunion Smiles Dentistry",
+   "itemType": "facility",
+   "city": "Commerce City",
+   "state": "CO",
+   "postalCode": "80022",
+   "brandName": "Smile Generation MyChart",
+   "brandId": "123ede49-0282-4ef5-a5e9-bf69ad89a105",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1079.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "Smile Generation MyChart"
+    }
+   ]
+  },
+  {
+   "searchName": "saint alphonsus rehabilitation services",
+   "displayName": "Saint Alphonsus Rehabilitation Services",
+   "itemType": "facility",
+   "city": "Boise",
+   "state": "ID",
+   "postalCode": "83704-8708",
+   "brandName": "Trinity Health",
+   "brandId": "fd5eabfe-4f02-4c98-8cc5-85152d703e36",
+   "endpoints": [
+    {
+     "url": "https://epic-ext.trinity-health.org/FHIR/api/FHIR/R4",
+     "name": "Trinity Health"
+    }
+   ]
+  },
+  {
+   "searchName": "saint francis bariatric surgery center - newark",
+   "displayName": "Saint Francis Bariatric Surgery Center - NEWARK",
+   "itemType": "facility",
+   "city": "Newark",
+   "state": "DE",
+   "postalCode": "19713-2145",
+   "brandName": "Trinity Health",
+   "brandId": "fd5eabfe-4f02-4c98-8cc5-85152d703e36",
+   "endpoints": [
+    {
+     "url": "https://epic-ext.trinity-health.org/FHIR/api/FHIR/R4",
+     "name": "Trinity Health"
+    }
+   ]
+  },
+  {
+   "searchName": "saint joseph medical group primary care lifeplex walkerton",
+   "displayName": "Saint Joseph Medical Group Primary Care LifePlex Walkerton",
+   "itemType": "facility",
+   "city": "Walkerton",
+   "state": "IN",
+   "postalCode": "46574-1116",
+   "brandName": "Trinity Health",
+   "brandId": "fd5eabfe-4f02-4c98-8cc5-85152d703e36",
+   "endpoints": [
+    {
+     "url": "https://epic-ext.trinity-health.org/FHIR/api/FHIR/R4",
+     "name": "Trinity Health"
+    }
+   ]
+  },
+  {
+   "searchName": "seattle children's pediatric cardiology of alaska - soldotna",
+   "displayName": "Seattle Children's Pediatric Cardiology of Alaska - Soldotna",
+   "itemType": "facility",
+   "city": "Soldotna",
+   "state": "AK",
+   "postalCode": "99669",
+   "brandName": "Seattle Children's MyChart",
+   "brandId": "22be3c03-b034-469e-be80-5b4a9fa7f6ca",
+   "endpoints": [
+    {
+     "url": "https://fhir.seattlechildrens.org/fhir/api/FHIR/R4",
+     "name": "Seattle Childrens Community Connect"
+    }
+   ]
+  },
+  {
+   "searchName": "sep palliative edg",
+   "displayName": "SEP PALLIATIVE EDG",
+   "itemType": "facility",
+   "city": "EDGEWOOD",
+   "state": "KY",
+   "postalCode": "41017-3403",
+   "brandName": "St. Elizabeth Healthcare",
+   "brandId": "2db84bd1-356a-4306-b79e-6377a6acbc92",
+   "endpoints": [
+    {
+     "url": "https://sehproxy.stelizabeth.com/arr-fhir/api/FHIR/R4",
+     "name": "Hendricks Regional Health"
+    }
+   ]
+  },
+  {
+   "searchName": "sgmc valdosta medical clinic",
+   "displayName": "SGMC Valdosta Medical Clinic",
+   "itemType": "facility",
+   "city": "Valdosta",
+   "state": "GA",
+   "postalCode": "31605",
+   "brandName": "SGMC",
+   "brandId": "628c78f7-4491-4326-9b86-41dbc3850db6",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1024.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "SGMC"
+    }
+   ]
+  },
+  {
+   "searchName": "sih cancer center",
+   "displayName": "SIH Cancer Center",
+   "itemType": "facility",
+   "city": "CARTERVILLE",
+   "state": "IL",
+   "postalCode": "62918-1600",
+   "brandName": "Southern Illinois Healthcare",
+   "brandId": "1f52a460-8d7c-42a3-9877-4d764a710bbf",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et0986.epichosted.com/FHIRProxy/api/FHIR/R4",
+     "name": "SIH Affiliates"
+    }
+   ]
+  },
+  {
+   "searchName": "slhs sleep lab gala site",
+   "displayName": "SLHS Sleep Lab Gala Site",
+   "itemType": "facility",
+   "city": "Meridian",
+   "state": "ID",
+   "postalCode": "83642-4881",
+   "brandName": "St. Luke's",
+   "brandId": "3788fc7a-9a66-442a-a8f2-af98e30a66a7",
+   "endpoints": [
+    {
+     "url": "https://epincoming.slhs.org/Interconnect-FHIR/api/FHIR/R4",
+     "name": "St. Luke's"
+    }
+   ]
+  },
+  {
+   "searchName": "slhs st lukes plaza",
+   "displayName": "SLHS ST LUKES PLAZA",
+   "itemType": "facility",
+   "city": "BOISE",
+   "state": "ID",
+   "postalCode": "83712-7643",
+   "brandName": "St. Luke's",
+   "brandId": "3788fc7a-9a66-442a-a8f2-af98e30a66a7",
+   "endpoints": [
+    {
+     "url": "https://epincoming.slhs.org/Interconnect-FHIR/api/FHIR/R4",
+     "name": "St. Luke's"
+    }
+   ]
+  },
+  {
+   "searchName": "sp",
+   "displayName": "sp",
+   "itemType": "facility",
+   "city": "Chicago Heights",
+   "state": "IL",
+   "postalCode": "60411",
+   "brandName": "Franciscan Alliance",
+   "brandId": "80f2c2de-4c8b-4ccf-aab9-993c1c2e1dbb",
+   "endpoints": [
+    {
+     "url": "https://ema.franciscanalliance.org/FHIR_PROXY/api/FHIR/R4/",
+     "name": "Franciscan Alliance"
+    }
+   ]
+  },
+  {
+   "searchName": "summerset",
+   "displayName": "Summerset",
+   "itemType": "facility",
+   "city": "ATLANTA",
+   "state": "GA",
+   "postalCode": "30331",
+   "brandName": "Emory Healthcare",
+   "brandId": "f12e12d0-8c3d-48e9-8610-84e8bae89d6c",
+   "endpoints": [
+    {
+     "url": "https://epicrp-prd.eushc.org/OAUTH2-PRD/api/FHIR/R4",
+     "name": "Emory Healthcare"
+    }
+   ]
+  },
+  {
+   "searchName": "the lung health center of metrowest",
+   "displayName": "The Lung Health Center of MetroWest",
+   "itemType": "facility",
+   "city": "Framingham",
+   "state": "MA",
+   "postalCode": "01702",
+   "brandName": "Tufts Medicine",
+   "brandId": "258683a6-6128-48be-8189-add2a80afacf",
+   "endpoints": [
+    {
+     "url": "https://intconfg-p.well-net.org/PRD-OAUTH2/api/FHIR/R4",
+     "name": "Tufts Medicine"
+    }
+   ]
+  },
+  {
+   "searchName": "tidalhealth general surgery seaford",
+   "displayName": "TidalHealth General Surgery Seaford",
+   "itemType": "facility",
+   "city": "Seaford",
+   "state": "DE",
+   "postalCode": "19973",
+   "brandName": "TidalHealth",
+   "brandId": "1b2ab9df-8586-44d7-9de4-047a3f9ab9c2",
+   "endpoints": [
+    {
+     "url": "https://eweb.tidalhealth.org/Oauth2/api/FHIR/R4",
+     "name": "TidalHealth"
+    }
+   ]
+  },
+  {
+   "searchName": "tmcone skyline",
+   "displayName": "TMCONE SKYLINE",
+   "itemType": "facility",
+   "city": "TUCSON",
+   "state": "AZ",
+   "postalCode": "85718-8005",
+   "brandName": "Tucson Medical Center",
+   "brandId": "fb01b8e2-1e44-4365-a636-8c050564c68f",
+   "endpoints": [
+    {
+     "url": "https://fhir.tmcaz.com/FHIRProxy/api/FHIR/R4",
+     "name": "Tucson Medical Center"
+    }
+   ]
+  },
+  {
+   "searchName": "uams health mobile health jonesboro",
+   "displayName": "UAMS Health Mobile Health Jonesboro",
+   "itemType": "facility",
+   "city": "JONESBORO",
+   "state": "AR",
+   "postalCode": "72401",
+   "brandName": "University of Arkansas for Medical Sciences",
+   "brandId": "26630845-6d55-4022-a601-0b98b83e1e7a",
+   "endpoints": [
+    {
+     "url": "https://ucsoap.uams.edu/FHIRProxy/HOME/api/FHIR/R4",
+     "name": "University of Arkansas for Medical Sciences"
+    }
+   ]
+  },
+  {
+   "searchName": "united airlines",
+   "displayName": "United Airlines",
+   "itemType": "facility",
+   "city": "TAMUNING",
+   "state": "GU",
+   "postalCode": "96931",
+   "brandName": "Premise Health",
+   "brandId": "a9983da1-cbe3-4591-aafd-016dc19675a6",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1052.epichosted.com/FHIRProxy/PREMISE/api/FHIR/R4",
+     "name": "Premise Health"
+    }
+   ]
+  },
+  {
+   "searchName": "united family medical center",
+   "displayName": "United Family Medical Center",
+   "itemType": "facility",
+   "city": "TAMUNING",
+   "state": "GU",
+   "postalCode": "96913",
+   "brandName": "Premise Health",
+   "brandId": "a9983da1-cbe3-4591-aafd-016dc19675a6",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1052.epichosted.com/FHIRProxy/PREMISE/api/FHIR/R4",
+     "name": "Premise Health"
+    }
+   ]
+  },
+  {
+   "searchName": "unitypoint clinic family medicine - eldora",
+   "displayName": "UnityPoint Clinic Family Medicine - Eldora",
+   "itemType": "facility",
+   "city": "Eldora",
+   "state": "IA",
+   "postalCode": "50627-1624",
+   "brandName": "UnityPoint Health",
+   "brandId": "e014f98f-9ff8-4b29-8c74-4015970c9815",
+   "endpoints": [
+    {
+     "url": "https://epicfhir.unitypoint.org/ProdFHIR/api/FHIR/R4",
+     "name": "UnityPoint Health"
+    }
+   ]
+  },
+  {
+   "searchName": "university of maryland charles regional medical group julie and bill dotson center for breast health",
+   "displayName": "University of Maryland Charles Regional Medical Group Julie and Bill Dotson Center for Breast Health",
+   "itemType": "facility",
+   "city": "LaPlata",
+   "state": "MD",
+   "postalCode": "20646-4382",
+   "brandName": "University of Maryland Medical System",
+   "brandId": "28df6439-1c90-4270-9861-4b76dcf45798",
+   "endpoints": [
+    {
+     "url": "https://fhir.umm.edu/fhir/api/FHIR/R4/",
+     "name": "Maryland Primary Care Physicians"
+    }
+   ]
+  },
+  {
+   "searchName": "uofl health - jewish south med plaza 2",
+   "displayName": "UofL Health - Jewish South Med Plaza 2",
+   "itemType": "facility",
+   "city": "Shepherdsville",
+   "state": "KY",
+   "postalCode": "40165",
+   "brandName": "University of Louisville Physicians",
+   "brandId": "548db088-add1-4b51-8179-e72b6a8b00d4",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1193.epichosted.com/FHIRProxy/ULP/api/FHIR/R4",
+     "name": "University of Louisville Physicians"
+    }
+   ]
+  },
+  {
+   "searchName": "wellstar windy hill pt solutions at buford",
+   "displayName": "Wellstar Windy Hill PT Solutions at Buford",
+   "itemType": "facility",
+   "city": "Buford",
+   "state": "GA",
+   "postalCode": "30519-7221",
+   "brandName": "WellStar",
+   "brandId": "13984187-b1df-4f5b-9be3-20327c8911fb",
+   "endpoints": [
+    {
+     "url": "https://epicsoap.wellstar.org/fhirproxy/HOME/api/FHIR/R4",
+     "name": "WellStar"
+    }
+   ]
+  },
+  {
+   "searchName": "wellstreet urgent care cbo",
+   "displayName": "Wellstreet Urgent Care CBO",
+   "itemType": "facility",
+   "city": "ATLANTA",
+   "state": "GA",
+   "postalCode": "30339-5995",
+   "brandName": "Piedmont Healthcare",
+   "brandId": "e2265f4c-43d3-482b-a2e2-c2b1f311bf02",
+   "endpoints": [
+    {
+     "url": "https://webproxy.piedmont.org/ARR-FHIR/api/FHIR/R4",
+     "name": "Piedmont Healthcare"
+    }
+   ]
+  },
+  {
+   "searchName": "women's health associates - meridian",
+   "displayName": "Women's Health Associates - Meridian",
+   "itemType": "facility",
+   "city": "Meridian",
+   "state": "ID",
+   "postalCode": "83642-3550",
+   "brandName": "Trinity Health",
+   "brandId": "fd5eabfe-4f02-4c98-8cc5-85152d703e36",
+   "endpoints": [
+    {
+     "url": "https://epic-ext.trinity-health.org/FHIR/api/FHIR/R4",
+     "name": "Trinity Health"
+    }
+   ]
+  },
+  {
+   "searchName": "wwh mobile van",
+   "displayName": "WWH Mobile Van",
+   "itemType": "facility",
+   "city": "WASHINGTON",
+   "state": "DC",
+   "postalCode": "20009",
+   "brandName": "Unity Health Care",
+   "brandId": "683380cb-c903-427e-9b00-5db703f85cae",
+   "endpoints": [
+    {
+     "url": "https://epicproxy.et1432.epichosted.com/FHIRProxyPRD/api/FHIR/R4",
+     "name": "Unity Health Care"
+    }
+   ]
+  },
+  {
+   "searchName": "yale medicine - hartford",
+   "displayName": "Yale Medicine - Hartford",
+   "itemType": "facility",
+   "city": "HARTFORD",
+   "state": "CT",
+   "postalCode": "06105-1770",
+   "brandName": "Yale New Haven Health/Yale Medical Group",
+   "brandId": "43af23c4-a317-47fb-b5d8-63049e37216c",
+   "endpoints": [
+    {
+     "url": "https://patientfhirapis.ynhh.org/PFF/api/FHIR/R4",
+     "name": "Yale New Haven Health/Yale Medical Group"
+    }
+   ]
+  }
+ ],
+ "processedTimestamp": "2026-08-30T19:41:09.250Z"
+}
