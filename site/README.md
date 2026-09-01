@@ -88,8 +88,33 @@ The page already ships semantic landmarks, every `section` tied to its heading w
 rendered colours rather than by eye, keep the page usable at 320px and at 200% zoom, and test
 the consent gate by keyboard alone — that path is where a redesign breaks it.
 
-One known item to fix rather than inherit: the consent checkbox is 22×22 CSS px, which meets
-SC 2.5.8 only via the spacing exception. 24×24 removes the argument.
+The consent checkbox is 22×22 CSS px. It **passes** SC 2.5.8 on the spacing exception, verified
+below rather than assumed — but 24×24 would remove the argument, so prefer that if you are
+touching it anyway.
+
+#### Running the tests
+
+```bash
+npx @axe-core/cli@4 https://health.circlejtp.me \
+  --tags wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa
+```
+
+Repeat for `/terms` and for `/ehr-connect?preview=<PREVIEW_TOKEN>&brandTags=epic^sandbox`. All
+three were at 0 violations and 0 incomplete as of 2026-09-01 (axe-core 4.13).
+
+**A clean run here does not mean the gate was tested.** The consent checkbox is `disabled` on
+load and axe skips disabled controls, so a plain scan never evaluates it — `#consent` does not
+even appear in the `target-size` results. To test the state a user actually reaches, serve a
+copy of `public/index.html` with the gate script removed and the `disabled` attributes stripped,
+and scan that too. That run is what confirms the checkbox and the connect button.
+
+Then walk the gate by keyboard, which no scanner can do: `End` must unlock the checkbox — the
+scroll condition has to be satisfiable without a mouse — `Space` must tick it, and the button
+must stay disabled while no client id is configured, with the `role="status"` region explaining
+each transition. Gate with the platform `disabled` attribute; `aria-disabled` must stay absent.
+
+Automated testing catches 20–50% of issues. Screen-reader announcement quality, reading order,
+rendered focus visibility, and reflow at 320px and 200% zoom still need a human.
 
 ### What is editable here, and what is not
 

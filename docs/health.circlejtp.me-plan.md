@@ -808,6 +808,51 @@ download button is now the only way data leaves the page — which is what the S
 Data Use Questionnaires say. 263 of those resources carry ids longer than 64 characters (max
 88), which remains the argument for the unconstrained FHIR ID setting on the registration.
 
+### 9.5 Accessibility is tested, and the claim is scoped to what was tested
+
+**Target: WCAG 2.2 Level AA.** The page exists to make sure people understand a warning before
+acting on it, so an inaccessible warning is a failed warning — and the audience skews toward
+disability and assistive technology use.
+
+Run against axe-core 4.13 with tags `wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa` on 2026-09-01:
+
+| Page state | Violations | Incomplete |
+|---|---|---|
+| `/` landing | 0 | 0 |
+| `/terms` | 0 | 0 |
+| `/ehr-connect` retriever | 0 | 0 |
+| `/` with the consent gate unlocked | 0 | 0 |
+
+29 rules passed on the landing page, `color-contrast` and `target-size` among them.
+
+**The default scan has a blind spot worth knowing about.** The consent checkbox is `disabled`
+on load and axe skips disabled controls, so a plain run never evaluates the most important
+interactive element on the site — `#consent` simply does not appear in the `target-size` node
+list. The fourth row above exists because of that: the page has to be re-tested with the gate
+unlocked before the result means anything. Doing so settles an open question from the site
+README: the checkbox is 22×22 CSS px and **passes** SC 2.5.8 on the spacing exception, which
+axe implements. Marginal, but compliant; 24×24 would remove the argument.
+
+**Keyboard walkthrough of the gate**, which axe cannot perform and which is where a redesign
+would break it:
+
+1. On load — checkbox and button both `disabled`; the live region reads *"Locked: read the
+   warning section above…"*
+2. `End` alone unlocks the checkbox. **The scroll condition is satisfiable from the keyboard**,
+   not only by mouse, and the region updates to *"Warning read…"*
+3. `Space` ticks the box; the button correctly stays disabled because no client id is
+   configured, and the region explains why.
+
+`aria-disabled` is `null` throughout — the platform `disabled` attribute is doing the
+enforcement, not a visual imitation of it.
+
+**What this does not establish.** axe catches 20–50% of issues by its own account. Untested:
+screen-reader announcement quality and whether the live-region updates are voiced at the right
+moment, reading order, focus visibility as rendered, and reflow at 320px and 200% zoom. Those
+need a human with VoiceOver or NVDA. The public claim is therefore "built to meet WCAG 2.2 AA"
+with an invitation to report gaps — a defensible statement backed by a clean automated pass and
+a keyboard walkthrough, not a certification.
+
 ## 10. Open questions
 
 - **Does the FTC Health Breach Notification Rule (16 CFR Part 318) apply?** It covers vendors
