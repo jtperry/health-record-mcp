@@ -8,8 +8,7 @@ a provider offers no usable FHIR API — stored in local SQLite keyed by which h
 came from, and queried through MCP tools. The record stays on your machine: no server we run
 ever receives it.
 
-Hosted at **[health.circlejtp.me](https://health.circlejtp.me)**, where the connect flow is not
-yet open to the public — see [below](#1-standalone-smart-on-fhir-web-client).
+Hosted at **[health.circlejtp.me](https://health.circlejtp.me)**.
 
 ## Built on jmandel/health-record-mcp
 
@@ -18,7 +17,7 @@ by [Josh Mandel](https://github.com/jmandel), and it exists because that project
 the hard part: a browser-only SMART on FHIR client that authenticates against a real health
 system, walks the FHIR graph, pulls attachments, and hands back a complete record without a
 server ever touching the data. The retriever, the MCP tool design (`grep_record`,
-`query_record`, `eval_record`), the SQLite representation, and the privacy architecture that
+`query_record`, `eval_record`), the initial SQLite representation, and the privacy architecture that
 makes all of it defensible are Josh's work. Go look at the upstream project.
 
 Josh's walkthrough of the original project: <https://youtu.be/K0t6MRyIqZU>
@@ -26,7 +25,28 @@ Josh's walkthrough of the original project: <https://youtu.be/K0t6MRyIqZU>
 **This fork is not a drop-in replacement for upstream, and it is not maintained by Josh.** File
 issues about anything here against *this* repository, not upstream.
 
+## What would I use this for?
+
+My inspiration was the amazing work done by [Dr. Cat Hicks](https://github.com/DrCatHicks) and her team with [Informed Patient](https://github.com/DrCatHicks/informed-patient) skill for AI. As I release this initial version, I am unfortunately navigating a health challenge and Informed Patient has been an absolute sanity saver.  Working through a comprehensive review, personal interview, developing checklists for doctor appointments, and EMPOWERING patients to advocate is just a few of the amazing outcomes from that skill.
+
+###Submitting your health record to an AI model is not without risk ###
+I ~~suspect~~ know damn well that the use of AI in general is controversial and submitting something so personal to a cloud based model is viewed as crazy at best. Old me would have been lighting the torch to come at new me. Until I was stuck with my current healthcare challenge. 
+
+Navigating the US healthcare system is a tough challenge in normal times. Add in the risk of feeling like hell and suffering through a very dense brain fog, and you start looking for help. I wish I had a local GPU meaty enough to handle this, but I didn't.  So yes I used cloud models and was picky about which one and cloud location when I could be. 
+
+###You have choices###
+I personally respect the heck out of friends and acquantinces standing on principal around the use of AI. We may disagree on particular use cases, but I am under no allusion of sunshine and rainbows around the tech. It worked for me in the case. YMMV, IANAL, etc etc
+
+At the end of the day, this project gets you a consolidated copy of your healthcare data **you** get to analyze and review however you want. 
+
+I wanted my full record with data points available for analysis with the skill. It has raised questions and made test recommendations incorporated into my care plan with great success.
+
+###This is a victory of sorts###
+Many of us who have worked in the heatlhcare community have pushed and advocated for eons to free the data locked within providers and payers. The [`Cures Act`](https://en.wikipedia.org/wiki/21st_Century_Cures_Act) among various pros and cons found in major legislation requires concrete implementations of API's exposing data from **providers and payors (insurance companies)**. CMS has a number of deadlines set for January 1, 2027. Provided they do not slip, significant data will be available and added to this project such as Prior Authorization information.
+
 ## Quick start
+
+Quick start focusing on what to do with the json download from <https://health.circlejtp.me> or a zip you have downloaded from a health record.
 
 ```bash
 # Build a database from a record downloaded via a hosted web client.
@@ -114,6 +134,8 @@ used a bare `INSERT` that stored every note again on each pull.
 athenahealth-backed practices in particular — export C-CDA XML instead, so this converts a C-CDA
 document into the same `ClientFullEHR` shape the FHIR path produces, and it lands in the same
 database alongside everything else.
+
+**Payer ingestion coming** Another huge benefit of the <`Cures Act`>(https://en.wikipedia.org/wiki/21st_Century_Cures_Act) is removing some final barriers when it comes to interoperability/transparency when it comes to an individuals right to their data from providers **and payers**. Prior Authorization among other things are mandatory for January 1, 2027.  
 
 **Import without registering an app (`--import-json`).** Load a downloaded record straight into
 SQLite without re-running the SMART flow, so you can authenticate once through a hosted client
@@ -204,10 +226,6 @@ This project includes a self-contained web application that allows users to conn
     a warning about what you are taking on by downloading your own record, gates the connect
     button behind acknowledging it, strives to meet WCAG 2.2 AA, and refreshes the Epic brand
     directory weekly so providers that move endpoints do not silently vanish from the list.
-
-    **The connect flow is not open to the public yet.** The Epic app registration has not been
-    approved for production, and until it is, the site says so plainly rather than offering a
-    button that cannot work. There is no timeline for opening it.
 
     Upstream also publishes a hosted client at
     [`https://mcp.fhir.me/ehr-connect`](https://mcp.fhir.me/ehr-connect), a separate deployment
