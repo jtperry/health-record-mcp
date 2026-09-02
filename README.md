@@ -20,8 +20,6 @@ server ever touching the data. The retriever, the MCP tool design (`grep_record`
 `query_record`, `eval_record`), the initial SQLite representation, and the privacy architecture that
 makes all of it defensible are Josh's work. Go look at the upstream project.
 
-Josh's walkthrough of the original project: <https://youtu.be/K0t6MRyIqZU>
-
 **This fork is not a drop-in replacement for upstream, and it is not maintained by Josh.** File
 issues about anything here against *this* repository, not upstream.
 
