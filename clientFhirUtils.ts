@@ -536,18 +536,23 @@ export function xmlToTextBestEffort(xmlContent: string): string {
 }
 
 // Processes the Blob data from a fetched attachment
-export async function processAttachmentData(fetchResultData: Blob, task: FetchTask, clientAttachments: ClientProcessedAttachment[]): Promise<void> {
+// Returns whether the attachment was actually stored. #318 Amendment 3's invariant
+// ("anything not affirmatively recognised and processed is a failure") applies here
+// too: a caller that ignores this return value and assumes success is exactly the
+// defect class the amendment exists to close, just one level down from the query
+// loop - attachment_count would undercount while nothing recorded why.
+export async function processAttachmentData(fetchResultData: Blob, task: FetchTask, clientAttachments: ClientProcessedAttachment[]): Promise<boolean> {
      if (!task.isAttachment || !task.resourceType || !task.resourceId || !task.attachmentPath || !task.originalResourceJson) {
          // Never log the task itself: it carries originalResourceJson, the full FHIR
          // resource this attachment belongs to.
          console.warn('Skipping attachment processing due to missing task context.');
-         return;
+         return false;
      }
 
      const originalAttachmentNode = _.get(task.originalResourceJson, task.attachmentPath);
      if (!originalAttachmentNode) {
          console.warn(`Could not find original attachment node at path ${task.attachmentPath} for ${task.resourceType}.`);
-         return;
+         return false;
      }
 
      let contentBase64: string | null = null;
@@ -616,16 +621,22 @@ export async function processAttachmentData(fetchResultData: Blob, task: FetchTa
           if (!clientAttachments.some(a => `${a.resourceType}/${a.resourceId}#${a.path}` === attachmentKey)){
                clientAttachments.push(newAttachment);
           }
+          return true;
 
      } catch (error) {
          console.error(`Error processing attachment data for ${task.resourceType} at ${task.attachmentPath}.`);
+         return false;
      }
 }
 
-// Processes inline base64 encoded attachments found in already fetched resources
-function processInlineAttachments(clientFullEhr: ClientFullEHR): void {
+// Processes inline base64 encoded attachments found in already fetched resources.
+// Returns the number of attachments dropped by the outer catch below, so the caller
+// can record a failure category (#318 Amendment 3's invariant) instead of letting
+// attachment_count undercount silently.
+function processInlineAttachments(clientFullEhr: ClientFullEHR): number {
     console.log("Processing inline attachments...");
     let processedCount = 0;
+    let droppedCount = 0;
     for (const resourceType in clientFullEhr.fhir) {
         for (const resource of clientFullEhr.fhir[resourceType]) {
             const attachments = findAttachments(resource);
@@ -702,13 +713,15 @@ function processInlineAttachments(clientFullEhr: ClientFullEHR): void {
                              processedCount++;
                          } catch (inlineError) {
                              console.error(`Error processing inline attachment for ${resource.resourceType} at ${path}.`);
+                             droppedCount++;
                          }
                      }
                  }
             }
         }
     }
-    console.log(`Finished processing ${processedCount} inline attachments.`);
+    console.log(`Finished processing ${processedCount} inline attachments${droppedCount > 0 ? `, ${droppedCount} dropped` : ''}.`);
+    return droppedCount;
 }
 
 
@@ -888,8 +901,29 @@ export async function fetchAllEhrDataClientSideParallel(
             }
 
             // --- Process Success Result ---
-            if (isJson && resultData?.resourceType === 'Bundle' && resultData.entry) { // Process Bundle
-                const entries = resultData.entry;
+            //
+            // #318 Amendment 3's invariant, stated positively: retrieval_complete is true
+            // only when every requested query affirmatively succeeded, and anything not
+            // affirmatively recognised and processed is a failure. `recognisedResponse` is
+            // how that is made hard to break structurally rather than by enumeration: it
+            // starts false, and only a branch below that actually consumed the response -
+            // processed a Bundle's entries (even zero of them) and examined its next-link,
+            // stored an attachment, or added a single resource - sets it true. There is no
+            // "else: assume success" branch left to reach; a response shape this file does
+            // not recognise (a 200 text/html interstitial, an empty object, anything that
+            // is not a Bundle/attachment/single-resource) falls through every branch,
+            // recognisedResponse stays false, and the block after this if/else chain treats
+            // that as a failure - the only outcome physically reachable when nothing here
+            // claimed the response. A future branch that forgets to set the flag under-
+            // claims (fails closed) rather than over-claims.
+            let recognisedResponse = false;
+
+            if (isJson && resultData?.resourceType === 'Bundle') { // Process Bundle. A page
+                // may legitimately carry no `entry` key at all (e.g. `total: 0`) - that is
+                // still a Bundle this file understands, so entries default to [] rather than
+                // falling through to the unrecognised-response path, and its next-link (if
+                // any) is still examined below regardless of whether this page had entries.
+                const entries = Array.isArray(resultData.entry) ? resultData.entry : [];
                 for (const entry of entries) {
                     if (entry.resource) {
                         const res = entry.resource;
@@ -943,8 +977,20 @@ export async function fetchAllEhrDataClientSideParallel(
                     // No next link: this query's pagination ran to exhaustion.
                     markQueryComplete(task.queryId);
                 }
+                recognisedResponse = true;
             } else if (task.isAttachment && isAttachmentBlob && resultData instanceof Blob) { // Process Attachment Blob
-                await processAttachmentData(resultData, task, clientFullEhr.attachments);
+                const stored = await processAttachmentData(resultData, task, clientFullEhr.attachments);
+                if (!stored) {
+                    // The fetch itself succeeded and the response was recognised as an
+                    // attachment blob - it is processInlineAttachments/processAttachmentData's
+                    // own internal handling that dropped it (missing context, or an error
+                    // while extracting/encoding it). Same invariant: attachment_count must
+                    // not undercount silently, so this is recorded as a failure rather than
+                    // left invisible.
+                    failedCategories.add('attachment_dropped');
+                    markQueryFailed(task);
+                }
+                recognisedResponse = true;
             } else if (isJson && resultData?.resourceType && resultData.id) { // Process Single Resource
                 const res = resultData;
                 if (!clientFullEhr.fhir[res.resourceType]) clientFullEhr.fhir[res.resourceType] = [];
@@ -959,9 +1005,20 @@ export async function fetchAllEhrDataClientSideParallel(
                     }
                 }
                 markQueryComplete(task.queryId); // A single resource has no pagination of its own.
-            } else { // Log other successful fetches
-                 console.log('Successfully fetched a non-FHIR, non-attachment URL.');
-                 markQueryComplete(task.queryId);
+                recognisedResponse = true;
+            }
+
+            if (!recognisedResponse) {
+                // #318 Amendment 3: a 200 response that is not a Bundle, an attachment blob,
+                // or a single JSON resource-with-id is not a success this file can vouch for
+                // - it might be an expired-session HTML interstitial, a captive-portal page,
+                // or any other shape nobody anticipated. `unrecognised_response` names the
+                // class without carrying any value from the response itself, and the query
+                // (if this task has one) is marked failed rather than complete: the default
+                // at every unhandled branch is failure, never success.
+                console.warn('Received a 200 response that this file does not recognise (not a Bundle, attachment, or single resource); treating the query as failed rather than assuming success.');
+                failedCategories.add('unrecognised_response');
+                markQueryFailed(task);
             }
             taskCompletedSuccessfully = true; // Mark as success for progress message
 
@@ -1095,7 +1152,10 @@ export async function fetchAllEhrDataClientSideParallel(
 
     // --- Final Processing ---
     progressCallback(completedFetches, totalTasks, "Processing inline data..."); // Update status before final step
-    processInlineAttachments(clientFullEhr);
+    const inlineAttachmentsDropped = processInlineAttachments(clientFullEhr);
+    // Same invariant as the fetch-loop responses: a silently dropped inline attachment
+    // must not leave retrieval_complete true with no trace of what went missing.
+    if (inlineAttachmentsDropped > 0) failedCategories.add('inline_attachment_dropped');
 
     progressCallback(completedFetches, totalTasks, "All fetching complete."); // Final progress update
     console.log(`Finished fetching. Resource types: ${Object.keys(clientFullEhr.fhir).length}, resources: ${resourceCount}, attachments: ${clientFullEhr.attachments.length}, pages followed: ${pagesFollowed}.`);

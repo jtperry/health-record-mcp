@@ -1366,7 +1366,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 // pseudonymous, not anonymous, and must never be logged, displayed, or put
                 // in a filename on its own.
                 const advouraPayload = { fhir: fetchedClientFullEhrObject.fhir, attachments: fetchedClientFullEhrObject.attachments };
-                const payloadSha256 = await sha256Hex(canonicalJSONStringify(advouraPayload));
+                // #318 Amendment 4: payload_sha256 is advisory (Amendment 1 Ruling 2) and may
+                // never be the reason a completed export is lost. `canonicalize` (RFC 8785)
+                // throws - rather than substituting, as the old hand-rolled canonicalizer did
+                // - on a lone surrogate, NaN, Infinity, or a circular reference; a FHIR server
+                // returning a string with an unpaired `\uD800`-style escape reaches this. The
+                // payload the user already successfully retrieved is the thing of value, so a
+                // throw here is caught locally: the manifest is still produced, with
+                // payload_sha256: null and a category recording that the digest could not be
+                // computed, instead of propagating to the outer catch below and losing the
+                // download entirely.
+                let payloadSha256: string | null = null;
+                const manifestCategories = [...retrievalOutcome.failedQueryCategories];
+                try {
+                    payloadSha256 = await sha256Hex(canonicalJSONStringify(advouraPayload));
+                } catch (digestErr: any) {
+                    console.warn(`Could not compute payload_sha256 (advisory only, export is unaffected): ${digestErr?.message || 'unknown error'}`);
+                    manifestCategories.push('digest_computation_failed');
+                }
                 const patientBinding = await derivePatientBinding(fhirBaseUrl, patientId);
                 const exportObject = {
                     advoura_export: {
@@ -1377,7 +1394,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         retrieval_complete: retrievalOutcome.retrievalComplete,
                         requested_queries: retrievalOutcome.requestedQueries,
                         completed_queries: retrievalOutcome.completedQueries,
-                        failed_query_categories: retrievalOutcome.failedQueryCategories,
+                        failed_query_categories: manifestCategories,
                         pages_followed: retrievalOutcome.pagesFollowed,
                         resource_count: retrievalOutcome.resourceCount,
                         attachment_count: attachmentCount,
