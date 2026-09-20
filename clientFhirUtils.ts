@@ -55,6 +55,10 @@ interface FetchTask {
      *  *asked for*, not every URL the crawl happened to visit. */
     queryId?: string;
     isInitialQuery?: boolean;
+    /** Set only on a task created by following Bundle.link[relation=next]. Used to
+     *  count pages_followed at the point a followed page actually survives dedupe and
+     *  is queued for fetch, not at the point it is merely discovered (S7). */
+    isFollowedPage?: boolean;
 }
 
 /** Retrieval-manifest data alongside the {fhir, attachments} payload. Not itself the
@@ -418,7 +422,8 @@ export function rtfToTextBestEffort(rtf: string): string {
             try {
                 return String.fromCharCode(parseInt(dec, 10));
             } catch (e) {
-                console.warn(`[RTF] Invalid Unicode code point: ${dec}`);
+                // S8: `dec` is decoded attachment content (clinical text), never logged.
+                console.warn('[RTF] Skipped an invalid Unicode code point.');
                 return ''; // Skip invalid code points
             }
         });
@@ -429,7 +434,8 @@ export function rtfToTextBestEffort(rtf: string): string {
                 // Assume Windows-1252 / Latin-1 as a common default fallback
                 return String.fromCharCode(parseInt(hex, 16));
             } catch (e) {
-                console.warn(`[RTF] Invalid hex escape: ${hex}`);
+                // S8: `hex` is decoded attachment content (clinical text), never logged.
+                console.warn('[RTF] Skipped an invalid hex escape.');
                 return ''; // Skip invalid hex escapes
             }
         });
@@ -471,7 +477,8 @@ export function rtfToTextBestEffort(rtf: string): string {
 
         return text || '[Empty RTF content after processing]';
     } catch (error) {
-        console.error('[RTF] Error during regex processing:', error);
+        // S8: this runs over attachment content; log only the error's own message.
+        console.error('[RTF] Error during regex processing:', (error as Error)?.message || 'unknown error');
         return '[Error processing RTF content]';
     }
 }
@@ -738,10 +745,24 @@ export async function fetchAllEhrDataClientSideParallel(
         return idx === -1 ? queryId : queryId.slice(0, idx);
     }
 
-    function markQueryFailed(queryId: string | undefined) {
-        if (!queryId) return;
-        queryFailed.add(queryId);
-        failedCategories.add(categoryOf(queryId));
+    // S1 fix (AdvouraExportV1 #318): reference-following and attachment tasks are
+    // never given a queryId (see FetchTask.queryId's own comment) - that's correct,
+    // they aren't one of the 28 requested queries. But it previously meant their
+    // failures called markQueryFailed(undefined), which recorded nothing at all: an
+    // export where every Binary/* fetch 403'd could still report retrieval_complete:
+    // true with failed_query_categories: []. A category-only task has no queryId to
+    // derive a category from, so it gets one of these two fixed categories instead.
+    function categoryForTask(task: FetchTask | undefined): string | undefined {
+        if (!task) return undefined;
+        if (task.queryId) return categoryOf(task.queryId);
+        return task.isAttachment ? 'attachment_fetch_failed' : 'reference_fetch_failed';
+    }
+
+    function markQueryFailed(task: FetchTask | undefined) {
+        if (!task) return;
+        if (task.queryId) queryFailed.add(task.queryId);
+        const category = categoryForTask(task);
+        if (category) failedCategories.add(category);
     }
 
     function markQueryComplete(queryId: string | undefined) {
@@ -749,9 +770,9 @@ export async function fetchAllEhrDataClientSideParallel(
         queryCompleted.add(queryId);
     }
 
-    function registerCapHit(cap: 'page_cap_exceeded' | 'resource_cap_exceeded' | 'byte_cap_exceeded', inFlightQueryId?: string) {
+    function registerCapHit(cap: 'page_cap_exceeded' | 'resource_cap_exceeded' | 'byte_cap_exceeded', inFlightTask?: FetchTask) {
         failedCategories.add(cap);
-        markQueryFailed(inFlightQueryId);
+        markQueryFailed(inFlightTask);
     }
 
     // Charged against MAX_TOTAL_BYTES across every request this run makes (search
@@ -798,7 +819,7 @@ export async function fetchAllEhrDataClientSideParallel(
             // fetching it at all would still leak which resources this patient has.
             if (!isTokenAllowedUrl(task.url, fhirBaseUrl)) {
                 console.warn("Skipped a task: its target is not on the FHIR server's origin, so the access token was not sent to it.");
-                markQueryFailed(task.queryId);
+                markQueryFailed(task);
                 // Deliberate skip, not a failure: the `finally` below still releases the
                 // pool slot and advances progress, and this keeps the run from reporting
                 // a fault the user cannot act on.
@@ -807,12 +828,26 @@ export async function fetchAllEhrDataClientSideParallel(
             }
 
             if (totalBytesRead >= MAX_TOTAL_BYTES) {
-                registerCapHit('byte_cap_exceeded', task.queryId);
+                registerCapHit('byte_cap_exceeded', task);
                 return discoveredTasks;
             }
 
             // Use the dynamically set headers
             const response = await fetchWithTimeout(task.url, { headers: currentHeaders }, REQUEST_TIMEOUT_MS, controller);
+
+            // S6: fetch()'s default redirect mode is 'follow', and response.url after a
+            // redirect is never otherwise inspected. Browsers strip the Authorization
+            // header on a cross-origin redirect, so token leakage is mitigated by the
+            // browser itself - but nothing stops a same-origin `next` link that 302s to
+            // an attacker host from having its body merged into clientFullEhr as if it
+            // were provider data. Re-check the *final* URL the same way the request URL
+            // itself is checked, and refuse to consume a body that landed off-origin.
+            if (!isTokenAllowedUrl(response.url, fhirBaseUrl)) {
+                console.warn("Skipped a task: it redirected off the FHIR server's origin.");
+                markQueryFailed(task);
+                taskCompletedSuccessfully = true;
+                return discoveredTasks;
+            }
 
             let resultData: any = null;
             let isJson = false;
@@ -827,7 +862,7 @@ export async function fetchAllEhrDataClientSideParallel(
                 bodyBytes = await readBodyWithByteBudget(response, controller, consumeBytes);
             } catch (bodyErr) {
                 if (bodyErr instanceof ByteBudgetExceededError) {
-                    registerCapHit('byte_cap_exceeded', task.queryId);
+                    registerCapHit('byte_cap_exceeded', task);
                     return discoveredTasks;
                 }
                 throw bodyErr;
@@ -863,7 +898,7 @@ export async function fetchAllEhrDataClientSideParallel(
                             // Add resource if new
                             if (!clientFullEhr.fhir[res.resourceType].some(r => r.id === res.id)) {
                                 if (resourceCount >= MAX_TOTAL_RESOURCES) {
-                                    registerCapHit('resource_cap_exceeded', task.queryId);
+                                    registerCapHit('resource_cap_exceeded', task);
                                 } else {
                                     clientFullEhr.fhir[res.resourceType].push(res);
                                     resourceCount++;
@@ -886,17 +921,22 @@ export async function fetchAllEhrDataClientSideParallel(
                         // not followed; the query is then reported incomplete rather than
                         // silently truncated.
                         console.warn("Refused to follow a Bundle next-link: it is not on the FHIR server's origin.");
-                        markQueryFailed(task.queryId);
+                        markQueryFailed(task);
                     } else if (pagesFollowed >= MAX_TOTAL_PAGES) {
-                        registerCapHit('page_cap_exceeded', task.queryId);
+                        registerCapHit('page_cap_exceeded', task);
                     } else {
-                        pagesFollowed++;
+                        // S7 fix: don't count this page as followed yet. It is only
+                        // *discovered* here - the dedupe step below (fetchedUrls) can
+                        // still drop it silently, e.g. a server that repeats the same
+                        // `next` URL forever. pages_followed is incremented once this
+                        // task actually survives dedupe and is queued for fetch.
                         discoveredTasks.push({
                             url: nextLink.url,
                             description: task.description,
                             depth: task.depth,
                             queryId: task.queryId,
                             isInitialQuery: task.isInitialQuery,
+                            isFollowedPage: true,
                         });
                     }
                 } else {
@@ -911,7 +951,7 @@ export async function fetchAllEhrDataClientSideParallel(
                 // Add resource if new
                  if (!clientFullEhr.fhir[res.resourceType].some(r => r.id === res.id)) {
                     if (resourceCount >= MAX_TOTAL_RESOURCES) {
-                        registerCapHit('resource_cap_exceeded', task.queryId);
+                        registerCapHit('resource_cap_exceeded', task);
                     } else {
                         clientFullEhr.fhir[res.resourceType].push(res);
                         resourceCount++;
@@ -937,7 +977,7 @@ export async function fetchAllEhrDataClientSideParallel(
             } else {
                 console.error(`Error processing a task: ${(error as Error)?.message || 'unknown error'}`);
             }
-            markQueryFailed(task.queryId);
+            markQueryFailed(task);
         } finally {
             // This task is complete (either success or failure)
             completedFetches++;
@@ -1031,6 +1071,11 @@ export async function fetchAllEhrDataClientSideParallel(
                          fetchedUrls.add(normalizedUrl); // Mark as added
                          nextBatchTasks.push(newTask);
                          totalTasks++; // Increment total count for progress UI
+                         // S7 fix: count a followed page only once it is actually queued
+                         // for fetch, not merely discovered - a page discovered but then
+                         // deduped away here (e.g. a server that repeats the same `next`
+                         // URL) was never really "followed".
+                         if (newTask.isFollowedPage) pagesFollowed++;
                     }
                 }
             }
@@ -1055,8 +1100,23 @@ export async function fetchAllEhrDataClientSideParallel(
     progressCallback(completedFetches, totalTasks, "All fetching complete."); // Final progress update
     console.log(`Finished fetching. Resource types: ${Object.keys(clientFullEhr.fhir).length}, resources: ${resourceCount}, attachments: ${clientFullEhr.attachments.length}, pages followed: ${pagesFollowed}.`);
 
-    const completedQueries = requestedQueryIds.filter(id => queryCompleted.has(id) && !queryFailed.has(id));
-    const retrievalComplete = failedCategories.size === 0 && completedQueries.length === requestedQueryIds.length;
+    // S3 fix: a requested query can go incomplete without ever calling
+    // markQueryFailed - e.g. a cyclic `next` link, where the repeated task is dropped
+    // silently by the fetchedUrls dedupe above and neither markQueryComplete nor
+    // markQueryFailed ever runs for it again. Deriving the failed set from "requested
+    // but never completed", rather than only from explicit failure calls, means
+    // retrieval_complete and failed_query_categories cannot disagree: whenever the
+    // former is false because some requested query is incomplete, the latter always
+    // names it.
+    for (const id of requestedQueryIds) {
+        if (!queryCompleted.has(id)) failedCategories.add(categoryOf(id));
+    }
+
+    const completedQueries = requestedQueryIds.filter(id => queryCompleted.has(id));
+    // S1 fix: also false when an attachment_fetch_failed / reference_fetch_failed (or
+    // any cap) category was recorded, even though those tasks have no queryId and so
+    // can never appear in requestedQueryIds/completedQueries themselves.
+    const retrievalComplete = failedCategories.size === 0;
 
     return {
         ehr: clientFullEhr,
