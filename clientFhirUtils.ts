@@ -59,6 +59,14 @@ interface FetchTask {
      *  count pages_followed at the point a followed page actually survives dedupe and
      *  is queued for fetch, not at the point it is merely discovered (S7). */
     isFollowedPage?: boolean;
+    /** #318 Amendment 5: true only for a task whose URL is a FHIR *search* (the 28
+     *  initial resourceType?params queries, and the pages chained from them) - never
+     *  inferred from the response. A direct read (the Patient fetch, or a task built
+     *  from following a resource reference) leaves this unset. The expectation for
+     *  "did this task succeed" is derived from this flag, set at task-creation time
+     *  from the request that was made, not from what the response happens to parse
+     *  as - so a response shape nobody anticipated can't accidentally satisfy it. */
+    isSearch?: boolean;
 }
 
 /** Retrieval-manifest data alongside the {fhir, attachments} payload. Not itself the
@@ -360,10 +368,11 @@ function extractTasksFromResource(resource: any, fhirBaseUrl: string, currentDep
         for (const ref of references) {
             const url = resolveReferenceUrl(ref.reference, fhirBaseUrl);
             if (url) {
-                newTasks.push({ 
-                    url: url, 
-                    description: `Reference: ${ref.reference}`, 
-                    depth: currentDepth + 1 
+                newTasks.push({
+                    url: url,
+                    description: `Reference: ${ref.reference}`,
+                    depth: currentDepth + 1,
+                    isSearch: false, // a followed reference is a direct read by id, not a search
                 });
             }
         }
@@ -971,6 +980,7 @@ export async function fetchAllEhrDataClientSideParallel(
                             queryId: task.queryId,
                             isInitialQuery: task.isInitialQuery,
                             isFollowedPage: true,
+                            isSearch: task.isSearch, // a page chained off a search is still that search
                         });
                     }
                 } else {
@@ -991,20 +1001,61 @@ export async function fetchAllEhrDataClientSideParallel(
                     markQueryFailed(task);
                 }
                 recognisedResponse = true;
-            } else if (isJson && resultData?.resourceType && resultData.id) { // Process Single Resource
+            } else if (isJson && !task.isSearch && resultData?.resourceType && resultData.id) {
+                // Process Single Resource - only reachable for a task that was not a
+                // search (the Patient direct read, or a task built from following a
+                // resource reference). #318 Amendment 5: the expectation comes from the
+                // task, not the response, so this branch is gated on task.isSearch
+                // rather than on anything about resultData.
                 const res = resultData;
-                if (!clientFullEhr.fhir[res.resourceType]) clientFullEhr.fhir[res.resourceType] = [];
-                // Add resource if new
-                 if (!clientFullEhr.fhir[res.resourceType].some(r => r.id === res.id)) {
-                    if (resourceCount >= MAX_TOTAL_RESOURCES) {
-                        registerCapHit('resource_cap_exceeded', task);
-                    } else {
-                        clientFullEhr.fhir[res.resourceType].push(res);
-                        resourceCount++;
-                        discoveredTasks = discoveredTasks.concat(extractTasksFromResource(res, fhirBaseUrl, task.depth));
+                if (res.resourceType === 'OperationOutcome') {
+                    // The server is reporting a problem with this read, not handing back
+                    // the resource that was asked for. #318 Amendment 5: an
+                    // OperationOutcome must never be stored into the fhir payload as
+                    // though it were a record - that is the same error as counting it as
+                    // a success, just on the read path instead of the search path.
+                    failedCategories.add('operation_outcome_response');
+                    markQueryFailed(task);
+                } else {
+                    if (!clientFullEhr.fhir[res.resourceType]) clientFullEhr.fhir[res.resourceType] = [];
+                    // Add resource if new
+                    if (!clientFullEhr.fhir[res.resourceType].some(r => r.id === res.id)) {
+                        if (resourceCount >= MAX_TOTAL_RESOURCES) {
+                            registerCapHit('resource_cap_exceeded', task);
+                        } else {
+                            clientFullEhr.fhir[res.resourceType].push(res);
+                            resourceCount++;
+                            discoveredTasks = discoveredTasks.concat(extractTasksFromResource(res, fhirBaseUrl, task.depth));
+                        }
                     }
+                    markQueryComplete(task.queryId); // A single resource has no pagination of its own.
                 }
-                markQueryComplete(task.queryId); // A single resource has no pagination of its own.
+                recognisedResponse = true;
+            } else if (isJson && task.isSearch && resultData?.resourceType && resultData.id) {
+                // #318 Amendment 5 (R-1): a task whose URL is a search must be answered
+                // by a Bundle. Anything else - including a single resource that parses
+                // cleanly and genuinely carries an id - is not a successful search,
+                // whatever it parses as. This is a shape rule derived from the request
+                // (task.isSearch, set at task-creation time), not a case enumerated from
+                // the response, so a fifth response shape can't defeat it the way three
+                // prior response-shaped patches were each defeated in turn.
+                //
+                // operation_outcome_response is named explicitly because it is the
+                // documented, reachable shape (Epic-family endpoints and scope-denied
+                // gateways answer some searches this way instead of an empty Bundle);
+                // any other single resource answering a search gets unrecognised_response,
+                // the same category the terminal fallback below uses for a shape this
+                // file doesn't understand at all. Neither is stored into the fhir
+                // payload, and neither completes the query - both call markQueryFailed,
+                // which fails closed per Amendment 3's invariant.
+                if (resultData.resourceType === 'OperationOutcome') {
+                    console.warn('A search received a 200 OperationOutcome instead of a Bundle; treating the query as failed rather than as a completed search with one record.');
+                    failedCategories.add('operation_outcome_response');
+                } else {
+                    console.warn('A search received a 200 single resource instead of a Bundle; treating the query as failed rather than as a completed search with one record.');
+                    failedCategories.add('unrecognised_response');
+                }
+                markQueryFailed(task);
                 recognisedResponse = true;
             }
 
@@ -1074,7 +1125,7 @@ export async function fetchAllEhrDataClientSideParallel(
                                 .join(', ');
             const queryId = `${query.resourceType}${paramDesc ? ` (${paramDesc})` : ''}`;
             requestedQueryIds.push(queryId);
-            currentTasks.push({ url: url, description: `Initial ${queryId}`, depth: 0, queryId, isInitialQuery: true });
+            currentTasks.push({ url: url, description: `Initial ${queryId}`, depth: 0, queryId, isInitialQuery: true, isSearch: true });
         }
     });
 
@@ -1085,7 +1136,10 @@ export async function fetchAllEhrDataClientSideParallel(
         fetchedUrls.add(normalizedPatientUrl);
         const queryId = 'Patient (direct read)';
         requestedQueryIds.push(queryId);
-        currentTasks.push({ url: patientUrl, description: "Patient Record", depth: 0, queryId, isInitialQuery: true });
+        // #318 Amendment 5: this is a direct read by id, not a search - isSearch stays
+        // false so a Bundle-shaped-only expectation is never applied to it. Explicit
+        // rather than relying on the field's default so this can't drift silently.
+        currentTasks.push({ url: patientUrl, description: "Patient Record", depth: 0, queryId, isInitialQuery: true, isSearch: false });
     }
 
     totalTasks = currentTasks.length;
