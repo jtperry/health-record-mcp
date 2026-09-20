@@ -119,6 +119,84 @@ describe('#318 Amendment 5 / R-1 - a search must be answered by a Bundle', () =>
         expect(outcome.ehr.fhir['Condition']?.some((r: any) => r.id === 'c-bare')).not.toBe(true);
     });
 
+    test('a read answered by a Bundle fails closed and the Patient direct-read does not complete', async () => {
+        // The second half of Amendment 5's ruling: "a search expects a Bundle, a read
+        // expects a resource. Anything that does not match what was asked for is a
+        // failure, whatever it is." Reproduces the verifier's case - a server that
+        // answers every request, including the Patient direct read, with an empty
+        // searchset Bundle. Before this fix the Bundle branch was not gated on
+        // task.isSearch at all, so this fell into the Bundle branch, processed zero
+        // entries, found no next-link, and called markQueryComplete - reporting
+        // retrieval_complete: true with zero resources and no Patient stored.
+        global.fetch = (async (url: any) => {
+            const u = String(url);
+            return fakeResponse(u, 200, emptyBundle());
+        }) as any;
+
+        const outcome = await fetchAllEhrDataClientSideParallel(
+            'fake-token', BASE_URL, PATIENT_ID, () => {}
+        );
+
+        expect(outcome.retrievalComplete).toBe(false);
+        expect(outcome.failedQueryCategories).toContain('unrecognised_response');
+        expect(outcome.completedQueries).not.toContain(PATIENT_READ_QUERY_ID);
+        expect(outcome.ehr.fhir['Patient']).toBeUndefined();
+        expect(outcome.resourceCount).toBe(0);
+    });
+
+    test('a multi-page search chain still works across more than one hop', async () => {
+        // Proves the isSearch gate on the Bundle branch does not disturb pagination:
+        // a search answered by three Bundle pages, chained by two next-links, must
+        // still follow both hops and complete.
+        const baseSearchUrl = `${BASE_URL}/Observation?category=laboratory&patient=${PATIENT_ID}`;
+        const page2Url = `${baseSearchUrl}&page=2`;
+        const page3Url = `${baseSearchUrl}&page=3`;
+        const fetchedPages: string[] = [];
+
+        global.fetch = (async (url: any) => {
+            const u = String(url);
+            if (u === page3Url) {
+                fetchedPages.push('page3');
+                return fakeResponse(u, 200, {
+                    resourceType: 'Bundle',
+                    entry: [{ resource: { resourceType: 'Observation', id: 'obs-3' } }],
+                    link: [],
+                });
+            }
+            if (u === page2Url) {
+                fetchedPages.push('page2');
+                return fakeResponse(u, 200, {
+                    resourceType: 'Bundle',
+                    entry: [{ resource: { resourceType: 'Observation', id: 'obs-2' } }],
+                    link: [{ relation: 'next', url: page3Url }],
+                });
+            }
+            if (u.startsWith(baseSearchUrl)) {
+                fetchedPages.push('page1');
+                return fakeResponse(u, 200, {
+                    resourceType: 'Bundle',
+                    entry: [{ resource: { resourceType: 'Observation', id: 'obs-1' } }],
+                    link: [{ relation: 'next', url: page2Url }],
+                });
+            }
+            if (u.startsWith(`${BASE_URL}/Patient/${PATIENT_ID}`)) {
+                return fakeResponse(u, 200, { resourceType: 'Patient', id: PATIENT_ID });
+            }
+            return fakeResponse(u, 200, emptyBundle());
+        }) as any;
+
+        const outcome = await fetchAllEhrDataClientSideParallel(
+            'fake-token', BASE_URL, PATIENT_ID, () => {}
+        );
+
+        expect(fetchedPages).toEqual(['page1', 'page2', 'page3']);
+        expect(outcome.ehr.fhir['Observation']?.some((r: any) => r.id === 'obs-1')).toBe(true);
+        expect(outcome.ehr.fhir['Observation']?.some((r: any) => r.id === 'obs-2')).toBe(true);
+        expect(outcome.ehr.fhir['Observation']?.some((r: any) => r.id === 'obs-3')).toBe(true);
+        expect(outcome.retrievalComplete).toBe(true);
+        expect(outcome.completedQueries).toContain(OBSERVATION_LAB_QUERY_ID);
+    });
+
     test('negative control: a fully successful run is still retrieval_complete: true with an empty category list', async () => {
         // Proves the isSearch gating does not simply pin retrieval_complete false for
         // every search task - a run where every search is answered by a Bundle (even an

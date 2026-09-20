@@ -927,8 +927,11 @@ export async function fetchAllEhrDataClientSideParallel(
             // claims (fails closed) rather than over-claims.
             let recognisedResponse = false;
 
-            if (isJson && resultData?.resourceType === 'Bundle') { // Process Bundle. A page
-                // may legitimately carry no `entry` key at all (e.g. `total: 0`) - that is
+            if (isJson && task.isSearch && resultData?.resourceType === 'Bundle') { // Process Bundle.
+                // #318 Amendment 5: a search expects a Bundle, so this branch is gated on
+                // task.isSearch the same way the single-resource branch below is gated on
+                // !task.isSearch - the expectation comes from the task, not the response.
+                // A page may legitimately carry no `entry` key at all (e.g. `total: 0`) - that is
                 // still a Bundle this file understands, so entries default to [] rather than
                 // falling through to the unrecognised-response path, and its next-link (if
                 // any) is still examined below regardless of whether this page had entries.
@@ -987,6 +990,16 @@ export async function fetchAllEhrDataClientSideParallel(
                     // No next link: this query's pagination ran to exhaustion.
                     markQueryComplete(task.queryId);
                 }
+                recognisedResponse = true;
+            } else if (isJson && !task.isSearch && resultData?.resourceType === 'Bundle') {
+                // #318 Amendment 5: "anything that does not match what was asked for is a
+                // failure, whatever it is." A read expects a resource, not a Bundle -
+                // symmetric to the search-expects-Bundle gate above. Recognised (it is a
+                // shape this file understands), but not a successful read: nothing is
+                // stored, and the query does not complete.
+                console.warn('A read received a Bundle instead of a single resource; treating the query as failed rather than assuming success.');
+                failedCategories.add('unrecognised_response');
+                markQueryFailed(task);
                 recognisedResponse = true;
             } else if (task.isAttachment && isAttachmentBlob && resultData instanceof Blob) { // Process Attachment Blob
                 const stored = await processAttachmentData(resultData, task, clientFullEhr.attachments);
