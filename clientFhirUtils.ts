@@ -5,11 +5,38 @@ import _ from 'lodash'; // Make sure lodash is installed (bun add lodash @types/
 import { htmlToText } from 'html-to-text';
 import { XMLParser } from 'fast-xml-parser';
 
-// --- Configuration --- 
+// --- Configuration ---
 const MAX_CONCURRENCY = 5;
 const MAX_FOLLOW_REFERENCES_DEPTH = 2; // How many levels deep to follow references like subject, encounter
 const MAX_ATTACHMENT_SIZE_MB = 10;
 const REQUEST_TIMEOUT_MS = 30000; // 30 seconds timeout per request
+
+// --- Retrieval bounds (AdvouraExportV1 §4: "Bounded everywhere") ---
+//
+// These bound one retrieval run end-to-end: search-result pagination, reference
+// following, and attachment fetches all draw from the same budgets. Hitting any of
+// them is not an error - it stops that part of the crawl, is recorded as a failed
+// category (see registerCapHit below), and forces retrieval_complete: false. The
+// numbers are chosen to comfortably cover a real decades-long longitudinal record
+// while still bounding worst-case time and browser memory:
+//
+//  - MAX_TOTAL_PAGES: 1000 Bundle pages across the whole run. At a typical server
+//    page size of ~50 entries, that is up to ~50,000 search-result resources before
+//    pagination itself is cut off - far beyond what a single patient's history holds
+//    in the categories this client queries, while still bounding total round-trips.
+//  - MAX_TOTAL_RESOURCES: 50,000 distinct FHIR resources held in memory. Real patient
+//    records seen in practice run to the low thousands; this leaves an order of
+//    magnitude of headroom without letting a pathological or hostile server grow the
+//    in-memory record without limit.
+//  - MAX_TOTAL_BYTES: 250 MiB of response bodies (FHIR JSON and attachments
+//    combined), enforced while streaming each response rather than after buffering
+//    it. Individual attachments are already capped at MAX_ATTACHMENT_SIZE_MB, so this
+//    accommodates a large multi-decade record plus dozens of near-max attachments
+//    while keeping the whole export well inside what a browser tab can hold and then
+//    re-serialize for download.
+const MAX_TOTAL_PAGES = 1000;
+const MAX_TOTAL_RESOURCES = 50_000;
+const MAX_TOTAL_BYTES = 250 * 1024 * 1024;
 
 // --- Interfaces & Types ---
 interface FetchTask {
@@ -21,6 +48,33 @@ interface FetchTask {
     attachmentPath?: string; // For attachment context
     originalResourceJson?: any; // For attachments, the resource it belongs to
     depth: number; // For reference following
+    /** Identifies which of the requested top-level queries this task (and any page
+     *  that follows it) belongs to. Only set on the initial 28 queries and the pages
+     *  chained from them - never on reference-following or attachment tasks - so that
+     *  requested_queries/completed_queries/failed_query_categories describe what was
+     *  *asked for*, not every URL the crawl happened to visit. */
+    queryId?: string;
+    isInitialQuery?: boolean;
+}
+
+/** Retrieval-manifest data alongside the {fhir, attachments} payload. Not itself the
+ *  advoura_export block (ehretriever.ts owns assembling that, including fields this
+ *  module has no business computing, like created_at and payload_sha256), but the raw
+ *  material for it. */
+export interface ClientRetrievalOutcome {
+    ehr: ClientFullEHR;
+    requestedQueries: string[];
+    completedQueries: string[];
+    failedQueryCategories: string[];
+    pagesFollowed: number;
+    resourceCount: number;
+    /** True only if every requested query completed AND pagination ran to exhaustion
+     *  for each of them, with no page/resource/byte cap hit along the way. */
+    retrievalComplete: boolean;
+}
+
+class ByteBudgetExceededError extends Error {
+    constructor() { super('Response byte budget exceeded.'); this.name = 'ByteBudgetExceededError'; }
 }
 
 interface FetchResult {
@@ -88,20 +142,26 @@ async function fetchResource(url: string, accessToken: string): Promise<any | nu
     try {
         const response = await fetchWithToken(url, accessToken);
         if (!response.ok) {
-            console.warn(`Failed to fetch resource ${url}: ${response.status} ${response.statusText}`);
+            // No URL, no body: a resource URL carries the patient's identifier as a path
+            // or query segment, and the response body may carry an OperationOutcome that
+            // echoes request parameters back.
+            console.warn(`Failed to fetch resource: ${response.status} ${response.statusText}`);
             return null;
         }
         return await response.json();
     } catch (error) {
-        console.error(`Error fetching resource ${url}:`, error);
+        console.error('Error fetching resource.');
         return null;
     }
 }
 
 
-// --- Core Fetching Function with Timeout --- 
-async function fetchWithTimeout(url: string, options: RequestInit, timeout = REQUEST_TIMEOUT_MS): Promise<Response> {
-    const controller = new AbortController();
+// --- Core Fetching Function with Timeout ---
+// Accepts an external AbortController so a caller can also abort the same request for
+// a different reason (the byte budget below); the timeout and the budget then share
+// one signal instead of racing two independent ones.
+async function fetchWithTimeout(url: string, options: RequestInit, timeout = REQUEST_TIMEOUT_MS, externalController?: AbortController): Promise<Response> {
+    const controller = externalController ?? new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
     try {
@@ -114,10 +174,67 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeout = REQ
     } catch (error) {
         clearTimeout(id);
         if (error instanceof DOMException && error.name === 'AbortError') {
-            throw new Error(`Request timed out after ${timeout / 1000}s: ${url}`);
+            // No URL: it carries the patient identifier and query parameters.
+            throw new Error(`Request timed out after ${timeout / 1000}s.`);
         }
         throw error;
     }
+}
+
+/**
+ * Reads a response body under a shared, mutable byte budget, aborting mid-stream
+ * rather than after the body has already been fully buffered.
+ *
+ * `response.json()`/`response.blob()` buffer the *entire* body before you see a
+ * single byte of it, so a budget check after the fact has already paid the memory
+ * (and, for a hostile or misbehaving server, the time) cost it was meant to avoid.
+ * Reading via `response.body.getReader()` and checking the running total after every
+ * chunk lets an oversized response be abandoned as soon as it crosses the line.
+ *
+ * `consumeBytes` is expected to attribute the read to the caller's shared,
+ * cross-request total (see MAX_TOTAL_BYTES) and to return false once that total
+ * would be exceeded.
+ */
+async function readBodyWithByteBudget(
+    response: Response,
+    controller: AbortController,
+    consumeBytes: (n: number) => boolean
+): Promise<Uint8Array> {
+    if (!response.body) {
+        // No streaming body available (some test/mock environments). Fall back to a
+        // single buffered read, still charged to the budget before use.
+        const buf = new Uint8Array(await response.arrayBuffer());
+        if (!consumeBytes(buf.byteLength)) throw new ByteBudgetExceededError();
+        return buf;
+    }
+
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value && value.byteLength > 0) {
+                total += value.byteLength;
+                if (!consumeBytes(value.byteLength)) {
+                    controller.abort();
+                    throw new ByteBudgetExceededError();
+                }
+                chunks.push(value);
+            }
+        }
+    } finally {
+        try { reader.releaseLock(); } catch { /* already released on abort/error */ }
+    }
+
+    const combined = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+        combined.set(chunk, offset);
+        offset += chunk.byteLength;
+    }
+    return combined;
 }
 
 // --- Task Extraction Helpers --- 
@@ -196,13 +313,14 @@ function resolveReferenceUrl(reference: string, baseUrl: string): string | null 
             return `${base}${reference}`;
         }
         if (reference.startsWith('#')) {
-             console.log(`Skipping internal contained resource reference: ${reference}`);
+             console.log('Skipping internal contained resource reference.');
              return null;
         }
-        console.warn(`Cannot resolve non-standard reference: ${reference}`);
+        // Reference strings and base URLs both carry FHIR ids; log neither.
+        console.warn('Cannot resolve non-standard reference.');
         return null;
     } catch (e) {
-        console.error(`Error resolving reference URL (${reference}, ${baseUrl}):`, e);
+        console.error('Error resolving reference URL.');
         return null;
     }
 }
@@ -267,7 +385,8 @@ function extractTasksFromResource(resource: any, fhirBaseUrl: string, currentDep
                     });
                 }
             } else {
-                 console.warn(`Skipping large attachment (${(attachment.size / 1024 / 1024).toFixed(1)} MB) for ${resource.resourceType}/${resource.id} at path ${path}`);
+                 // Resource type and path only; the resource id identifies this patient's record.
+                 console.warn(`Skipping large attachment (${(attachment.size / 1024 / 1024).toFixed(1)} MB) for ${resource.resourceType} at path ${path}`);
             }
         } 
         // Note: Inline attachments (attachment.data) are handled separately after all fetches
@@ -404,7 +523,7 @@ export function xmlToTextBestEffort(xmlContent: string): string {
         return finalText || '[Empty XML content after processing]'; // Return marker if empty
 
     } catch (xmlErr) {
-        console.error(`[XML Parse] Error parsing XML content:`, xmlErr);
+        console.error('[XML Parse] Error parsing XML content.');
         return '[Error parsing XML]';
     }
 }
@@ -412,13 +531,15 @@ export function xmlToTextBestEffort(xmlContent: string): string {
 // Processes the Blob data from a fetched attachment
 export async function processAttachmentData(fetchResultData: Blob, task: FetchTask, clientAttachments: ClientProcessedAttachment[]): Promise<void> {
      if (!task.isAttachment || !task.resourceType || !task.resourceId || !task.attachmentPath || !task.originalResourceJson) {
-         console.warn('Skipping attachment processing due to missing task context', { task });
+         // Never log the task itself: it carries originalResourceJson, the full FHIR
+         // resource this attachment belongs to.
+         console.warn('Skipping attachment processing due to missing task context.');
          return;
      }
-    
+
      const originalAttachmentNode = _.get(task.originalResourceJson, task.attachmentPath);
      if (!originalAttachmentNode) {
-         console.warn(`Could not find original attachment node at path ${task.attachmentPath} for ${task.resourceType}/${task.resourceId}`);
+         console.warn(`Could not find original attachment node at path ${task.attachmentPath} for ${task.resourceType}.`);
          return;
      }
 
@@ -445,7 +566,7 @@ export async function processAttachmentData(fetchResultData: Blob, task: FetchTa
                      selectors: [{ selector: 'img', format: 'skip' }] 
                  });
              } catch (htmlErr) {
-                 console.error(`[ATTACHMENT:HTML] HTML parsing error in ${task.resourceType}/${task.resourceId} at ${task.attachmentPath}:`, htmlErr);
+                 console.error(`[ATTACHMENT:HTML] HTML parsing error in ${task.resourceType} attachment at ${task.attachmentPath}.`);
                  contentPlaintext = '[Error parsing HTML]';
              }
         } else if (contentType.includes('xml')) { // Broader check for XML types
@@ -453,24 +574,25 @@ export async function processAttachmentData(fetchResultData: Blob, task: FetchTa
                  const xmlContent = await blob.text();
                  contentPlaintext = xmlToTextBestEffort(xmlContent);
               } catch (err) { // Catch errors from blob.text() or xmlToTextBestEffort
-                 console.error(`[ATTACHMENT:XML] Error reading or processing XML blob in ${task.resourceType}/${task.resourceId} at ${task.attachmentPath}:`, err);
+                 console.error(`[ATTACHMENT:XML] Error reading or processing XML blob in ${task.resourceType} attachment at ${task.attachmentPath}.`);
                  contentPlaintext = '[Error processing XML]';
              }
          } else if (contentType.startsWith('application/rtf') || contentType.startsWith('text/rtf')) {
              try {
-                console.log(`[ATTACHMENT:RTF] Attempting best-effort RTF parsing for ${task.resourceType}/${task.resourceId} at ${task.attachmentPath}`);
+                console.log(`[ATTACHMENT:RTF] Attempting best-effort RTF parsing for a ${task.resourceType} attachment.`);
                 const rtfContent = await blob.text(); // Read blob as text (potential encoding issues)
                 contentPlaintext = rtfToTextBestEffort(rtfContent);
                  if (!contentPlaintext) contentPlaintext = '[Empty RTF content after processing]';
              } catch (rtfErr) {
-                 console.error(`[ATTACHMENT:RTF] Error reading or processing RTF blob in ${task.resourceType}/${task.resourceId} at ${task.attachmentPath}:`, rtfErr);
+                 console.error(`[ATTACHMENT:RTF] Error reading or processing RTF blob in ${task.resourceType} attachment at ${task.attachmentPath}.`);
                  contentPlaintext = '[Error processing RTF]';
              }
          } else {
                              contentPlaintext = await blob.text();
-             // Fallback for other binary types or unhandled text types
-             console.log(`[ATTACHMENT:OTHER] Attachment ${task.resourceType}/${task.resourceId} at ${task.attachmentPath} has non-extractable type ${contentType}. default .text() plaintext generated.`);
-         } 
+             // Fallback for other binary types or unhandled text types. Content type and
+             // path only, never the resource id or the content itself.
+             console.log(`[ATTACHMENT:OTHER] Attachment for ${task.resourceType} at ${task.attachmentPath} has non-extractable type ${contentType}. default .text() plaintext generated.`);
+         }
 
          const newAttachment: ClientProcessedAttachment = {
              resourceType: task.resourceType,
@@ -489,7 +611,7 @@ export async function processAttachmentData(fetchResultData: Blob, task: FetchTa
           }
 
      } catch (error) {
-         console.error(`Error processing attachment data for ${task.resourceType}/${task.resourceId} at ${task.attachmentPath}:`, error);
+         console.error(`Error processing attachment data for ${task.resourceType} at ${task.attachmentPath}.`);
      }
 }
 
@@ -514,11 +636,11 @@ function processInlineAttachments(clientFullEhr: ClientFullEHR): void {
                          try {
                              if (contentBase64) {
                                  let decodedText: string | null = null;
-                                 try { 
+                                 try {
                                      // Use Buffer for robust decoding (handles UTF-8 etc.)
-                                     decodedText = Buffer.from(contentBase64, 'base64').toString('utf8'); 
+                                     decodedText = Buffer.from(contentBase64, 'base64').toString('utf8');
                                  } catch (decodeError) {
-                                     console.warn(`[INLINE:DECODE] Failed to decode base64 for inline attachment ${resource.resourceType}/${resource.id} at ${path}:`, decodeError);
+                                     console.warn(`[INLINE:DECODE] Failed to decode base64 for inline ${resource.resourceType} attachment at ${path}.`);
                                      contentPlaintext = '[Error decoding base64 data]';
                                  }
 
@@ -530,7 +652,7 @@ function processInlineAttachments(clientFullEhr: ClientFullEHR): void {
                                                 selectors: [{ selector: 'img', format: 'skip' }] 
                                             });
                                         } catch (htmlErr) {
-                                            console.error(`[INLINE:HTML] HTML parsing error for inline ${resource.resourceType}/${resource.id} at ${path}:`, htmlErr);
+                                            console.error(`[INLINE:HTML] HTML parsing error for inline ${resource.resourceType} attachment at ${path}.`);
                                             contentPlaintext = '[Error parsing inline HTML]';
                                         }
                                     } else if (contentType.includes('xml')) {
@@ -539,18 +661,18 @@ function processInlineAttachments(clientFullEhr: ClientFullEHR): void {
                                             contentPlaintext = xmlToTextBestEffort(decodedText);
                                         } catch (xmlErr) {
                                             // Catch errors specifically from the XML processing function for inline
-                                            console.error(`[INLINE:XML] XML parsing error for inline ${resource.resourceType}/${resource.id} at ${path}:`, xmlErr);
+                                            console.error(`[INLINE:XML] XML parsing error for inline ${resource.resourceType} attachment at ${path}.`);
                                             contentPlaintext = '[Error parsing inline XML]';
                                         }
                                     } else if (contentType.startsWith('text/') || contentType === 'application/json' || contentType === 'application/fhir+json') {
                                          contentPlaintext = decodedText; // Already decoded text
                                     } else if (contentType.startsWith('application/rtf') || contentType.startsWith('text/rtf')) {
                                         try {
-                                            console.log(`[INLINE:RTF] Attempting best-effort RTF parsing for inline ${resource.resourceType}/${resource.id} at ${path}`);
+                                            console.log(`[INLINE:RTF] Attempting best-effort RTF parsing for an inline ${resource.resourceType} attachment.`);
                                             contentPlaintext = rtfToTextBestEffort(decodedText);
                                             if (!contentPlaintext) contentPlaintext = '[Empty inline RTF content after processing]';
                                         } catch (rtfErr) {
-                                            console.error(`[INLINE:RTF] Error processing inline RTF in ${resource.resourceType}/${resource.id} at ${path}:`, rtfErr);
+                                            console.error(`[INLINE:RTF] Error processing inline RTF in ${resource.resourceType} attachment at ${path}.`);
                                             contentPlaintext = '[Error processing inline RTF]';
                                         }
                                     } else {
@@ -572,7 +694,7 @@ function processInlineAttachments(clientFullEhr: ClientFullEHR): void {
                              });
                              processedCount++;
                          } catch (inlineError) {
-                             console.error(`Error processing inline attachment for ${resource.resourceType}/${resource.id} at ${path}:`, inlineError);
+                             console.error(`Error processing inline attachment for ${resource.resourceType} at ${path}.`);
                          }
                      }
                  }
@@ -583,23 +705,67 @@ function processInlineAttachments(clientFullEhr: ClientFullEHR): void {
 }
 
 
-// --- Simplified Parallel Fetch Orchestrator --- 
+// --- Simplified Parallel Fetch Orchestrator ---
 export async function fetchAllEhrDataClientSideParallel(
     accessToken: string,
     fhirBaseUrl: string,
     patientId: string,
     progressCallback: ProgressCallback
-): Promise<ClientFullEHR> {
+): Promise<ClientRetrievalOutcome> {
 
     const clientFullEhr: ClientFullEHR = { fhir: {}, attachments: [] };
     const fetchedUrls = new Set<string>(); // Tracks URLs already added to a batch
     const pool = new ConcurrencyManager(MAX_CONCURRENCY);
     let completedFetches = 0;
-    let totalTasks = 0; 
+    let totalTasks = 0;
+
+    // --- Retrieval-manifest bookkeeping (AdvouraExportV1 requested/completed/failed
+    // queries, pages_followed, resource_count). None of this is itself the
+    // advoura_export block - ehretriever.ts assembles that - but it is the truthful
+    // record of what actually happened that block has to report. ---
+    let pagesFollowed = 0;
+    let totalBytesRead = 0;
+    let resourceCount = 0;
+    const queryCompleted = new Set<string>();
+    const queryFailed = new Set<string>();
+    const failedCategories = new Set<string>();
+
+    // "Observation (category=laboratory)" -> "Observation". Collapses queries that
+    // share a resource type into one failure category, and never carries patient data
+    // - queryIds are built only from this file's fixed, static query list.
+    function categoryOf(queryId: string): string {
+        const idx = queryId.indexOf(' (');
+        return idx === -1 ? queryId : queryId.slice(0, idx);
+    }
+
+    function markQueryFailed(queryId: string | undefined) {
+        if (!queryId) return;
+        queryFailed.add(queryId);
+        failedCategories.add(categoryOf(queryId));
+    }
+
+    function markQueryComplete(queryId: string | undefined) {
+        if (!queryId || queryFailed.has(queryId)) return; // a prior failure is not undone by a later success
+        queryCompleted.add(queryId);
+    }
+
+    function registerCapHit(cap: 'page_cap_exceeded' | 'resource_cap_exceeded' | 'byte_cap_exceeded', inFlightQueryId?: string) {
+        failedCategories.add(cap);
+        markQueryFailed(inFlightQueryId);
+    }
+
+    // Charged against MAX_TOTAL_BYTES across every request this run makes (search
+    // results, followed pages, referenced resources, and attachments alike) - a single
+    // shared budget, not one per request.
+    function consumeBytes(n: number): boolean {
+        if (totalBytesRead + n > MAX_TOTAL_BYTES) return false;
+        totalBytesRead += n;
+        return true;
+    }
 
     const headers = {
         'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/fhir+json, application/json, */*' 
+        'Accept': 'application/fhir+json, application/json, */*'
     };
 
     // --- Fetch and Process Single Task Function (Uses pool, updates clientFullEhr directly) ---
@@ -615,13 +781,13 @@ export async function fetchAllEhrDataClientSideParallel(
             const originalAttachmentNode = _.get(task.originalResourceJson, task.attachmentPath);
             if (originalAttachmentNode?.contentType) {
                 acceptHeader = originalAttachmentNode.contentType; // Use specific content type
-                 console.log(`Setting Accept header to "${acceptHeader}" for attachment: ${task.description}`);
             }
         }
         const currentHeaders = new Headers(headers); // Clone base headers
         currentHeaders.set('Accept', acceptHeader); // Set dynamic Accept header
         // --- End Determine Accept Header ---
 
+        const controller = new AbortController();
 
         try {
             progressCallback(completedFetches, totalTasks, `Fetching: ${task.description}...`);
@@ -631,7 +797,8 @@ export async function fetchAllEhrDataClientSideParallel(
             // right. Anything off-origin is skipped, not fetched without the header -
             // fetching it at all would still leak which resources this patient has.
             if (!isTokenAllowedUrl(task.url, fhirBaseUrl)) {
-                console.warn(`Skipped "${task.description}": ${task.url} is not on the FHIR server's origin, so the access token was not sent to it.`);
+                console.warn("Skipped a task: its target is not on the FHIR server's origin, so the access token was not sent to it.");
+                markQueryFailed(task.queryId);
                 // Deliberate skip, not a failure: the `finally` below still releases the
                 // pool slot and advances progress, and this keeps the run from reporting
                 // a fault the user cannot act on.
@@ -639,28 +806,48 @@ export async function fetchAllEhrDataClientSideParallel(
                 return discoveredTasks;
             }
 
+            if (totalBytesRead >= MAX_TOTAL_BYTES) {
+                registerCapHit('byte_cap_exceeded', task.queryId);
+                return discoveredTasks;
+            }
+
             // Use the dynamically set headers
-            const response = await fetchWithTimeout(task.url, { headers: currentHeaders }, REQUEST_TIMEOUT_MS);
-            
+            const response = await fetchWithTimeout(task.url, { headers: currentHeaders }, REQUEST_TIMEOUT_MS, controller);
+
             let resultData: any = null;
             let isJson = false;
             let isAttachmentBlob = false;
             const contentType = response.headers.get('content-type') || '';
 
-            if (contentType.includes('json')) {
-                resultData = await response.json(); isJson = true;
-            } else if (task.isAttachment) {
-                resultData = await response.blob(); isAttachmentBlob = true;
-            } else { // Fallback for unexpected types
-                console.warn(`Unexpected content type (${contentType}) for ${task.url}, attempting text.`);
-                resultData = await response.text();
+            // Enforced while streaming, not after buffering: readBodyWithByteBudget aborts
+            // the request as soon as the shared byte budget would be exceeded, rather than
+            // allocating the full body first and checking its size afterward.
+            let bodyBytes: Uint8Array;
+            try {
+                bodyBytes = await readBodyWithByteBudget(response, controller, consumeBytes);
+            } catch (bodyErr) {
+                if (bodyErr instanceof ByteBudgetExceededError) {
+                    registerCapHit('byte_cap_exceeded', task.queryId);
+                    return discoveredTasks;
+                }
+                throw bodyErr;
             }
 
-            if (!response.ok) { // Handle HTTP errors
-                let errorMsg = `HTTP ${response.status} for ${task.url}`;
-                if (isJson && resultData?.issue?.[0]?.diagnostics) { errorMsg += `: ${resultData.issue[0].diagnostics}`; }
-                else if (typeof resultData === 'string') { errorMsg += `: ${resultData.substring(0, 100)}`; }
-                const httpError = new Error(errorMsg) as Error & { status?: number };
+            if (contentType.includes('json')) {
+                resultData = JSON.parse(new TextDecoder('utf-8').decode(bodyBytes));
+                isJson = true;
+            } else if (task.isAttachment) {
+                resultData = contentType ? new Blob([bodyBytes], { type: contentType }) : new Blob([bodyBytes]);
+                isAttachmentBlob = true;
+            } else { // Fallback for unexpected types
+                console.warn(`Unexpected content type (${contentType}); attempting to read as text.`);
+                resultData = new TextDecoder('utf-8').decode(bodyBytes);
+            }
+
+            if (!response.ok) { // Handle HTTP errors. No URL and no response body in the
+                // message: both can carry the patient's identifier or clinical content
+                // echoed back by an OperationOutcome.
+                const httpError = new Error(`HTTP ${response.status}`) as Error & { status?: number };
                 httpError.status = response.status;
                 throw httpError;
             }
@@ -671,15 +858,50 @@ export async function fetchAllEhrDataClientSideParallel(
                 for (const entry of entries) {
                     if (entry.resource) {
                         const res = entry.resource;
-                        if (res.resourceType && res.id) { 
+                        if (res.resourceType && res.id) {
                             if (!clientFullEhr.fhir[res.resourceType]) clientFullEhr.fhir[res.resourceType] = [];
                             // Add resource if new
                             if (!clientFullEhr.fhir[res.resourceType].some(r => r.id === res.id)) {
-                                clientFullEhr.fhir[res.resourceType].push(res);
-                                discoveredTasks = discoveredTasks.concat(extractTasksFromResource(res, fhirBaseUrl, task.depth));
+                                if (resourceCount >= MAX_TOTAL_RESOURCES) {
+                                    registerCapHit('resource_cap_exceeded', task.queryId);
+                                } else {
+                                    clientFullEhr.fhir[res.resourceType].push(res);
+                                    resourceCount++;
+                                    discoveredTasks = discoveredTasks.concat(extractTasksFromResource(res, fhirBaseUrl, task.depth));
+                                }
                             }
                         }
                     }
+                }
+
+                // --- Follow Bundle.link[relation=next], bounded. ---
+                const nextLink = Array.isArray(resultData.link)
+                    ? resultData.link.find((l: any) => l && l.relation === 'next' && typeof l.url === 'string')
+                    : undefined;
+                if (nextLink) {
+                    if (!isTokenAllowedUrl(nextLink.url, fhirBaseUrl)) {
+                        // A next-link is server-supplied, so nothing prevents a misbehaving
+                        // or compromised server from pointing it off its own origin - which
+                        // would carry the bearer token there on the following fetch. Refused,
+                        // not followed; the query is then reported incomplete rather than
+                        // silently truncated.
+                        console.warn("Refused to follow a Bundle next-link: it is not on the FHIR server's origin.");
+                        markQueryFailed(task.queryId);
+                    } else if (pagesFollowed >= MAX_TOTAL_PAGES) {
+                        registerCapHit('page_cap_exceeded', task.queryId);
+                    } else {
+                        pagesFollowed++;
+                        discoveredTasks.push({
+                            url: nextLink.url,
+                            description: task.description,
+                            depth: task.depth,
+                            queryId: task.queryId,
+                            isInitialQuery: task.isInitialQuery,
+                        });
+                    }
+                } else {
+                    // No next link: this query's pagination ran to exhaustion.
+                    markQueryComplete(task.queryId);
                 }
             } else if (task.isAttachment && isAttachmentBlob && resultData instanceof Blob) { // Process Attachment Blob
                 await processAttachmentData(resultData, task, clientFullEhr.attachments);
@@ -688,11 +910,18 @@ export async function fetchAllEhrDataClientSideParallel(
                 if (!clientFullEhr.fhir[res.resourceType]) clientFullEhr.fhir[res.resourceType] = [];
                 // Add resource if new
                  if (!clientFullEhr.fhir[res.resourceType].some(r => r.id === res.id)) {
-                    clientFullEhr.fhir[res.resourceType].push(res);
-                    discoveredTasks = discoveredTasks.concat(extractTasksFromResource(res, fhirBaseUrl, task.depth));
+                    if (resourceCount >= MAX_TOTAL_RESOURCES) {
+                        registerCapHit('resource_cap_exceeded', task.queryId);
+                    } else {
+                        clientFullEhr.fhir[res.resourceType].push(res);
+                        resourceCount++;
+                        discoveredTasks = discoveredTasks.concat(extractTasksFromResource(res, fhirBaseUrl, task.depth));
+                    }
                 }
+                markQueryComplete(task.queryId); // A single resource has no pagination of its own.
             } else { // Log other successful fetches
-                 console.log(`Successfully fetched non-FHIR, non-attachment URL: ${task.url}`);
+                 console.log('Successfully fetched a non-FHIR, non-attachment URL.');
+                 markQueryComplete(task.queryId);
             }
             taskCompletedSuccessfully = true; // Mark as success for progress message
 
@@ -700,17 +929,19 @@ export async function fetchAllEhrDataClientSideParallel(
             // A crawl that follows every reference will inevitably ask for things the granted
             // scope does not cover, and servers hold data they will not serve by id. Those are
             // routine outcomes of walking the graph, not faults, and reporting them as errors
-            // buried the one defect in this run that was actually ours.
+            // buried the one defect in this run that was actually ours. Only the error's own
+            // message is logged (never the task's description or URL, which can carry the
+            // patient's id and specific clinical categories).
             if (isExpectedFetchFailure(error)) {
-                console.warn(`Skipped "${task.description}": ${(error as Error).message}`);
+                console.warn(`Skipped a task (expected): ${(error as Error).message}`);
             } else {
-                console.error(`Error processing task "${task.description}":`, error);
+                console.error(`Error processing a task: ${(error as Error)?.message || 'unknown error'}`);
             }
+            markQueryFailed(task.queryId);
         } finally {
             // This task is complete (either success or failure)
             completedFetches++;
-            const statusMsg = taskCompletedSuccessfully ? `Completed: ${task.description}` : `Failed: ${task.description}`;
-            progressCallback(completedFetches, totalTasks, statusMsg); // Update progress
+            progressCallback(completedFetches, totalTasks, taskCompletedSuccessfully ? `Completed: ${task.description}` : `Failed: ${task.description}`); // Update progress
             pool.release(); // IMPORTANT: Release the pool slot
         }
         return discoveredTasks; // Return tasks discovered from this resource
@@ -719,6 +950,7 @@ export async function fetchAllEhrDataClientSideParallel(
 
     // --- Initialize Task List ---
     let currentTasks: FetchTask[] = [];
+    const requestedQueryIds: string[] = [];
     // Brand endpoints are published with a trailing slash more often than not, so joining
     // with an unconditional "/" yields ".../R4//Observation". Epic tolerates the doubled
     // slash on most paths but rejects it on some, which made this look like an intermittent
@@ -731,45 +963,58 @@ export async function fetchAllEhrDataClientSideParallel(
     initialQueries.forEach(query => {
         const params = new URLSearchParams(query.params as Record<string, string>);
         // Consider adding a default _count=500 here or handle pagination later
-        // params.set('_count', '500'); 
+        // params.set('_count', '500');
         const url = `${fhirBaseUrlWithSlash}${query.resourceType}?${params.toString()}`;
         const normalizedUrl = url.replace(/\/$/, ''); // Normalize slightly for deduping
         if (!fetchedUrls.has(normalizedUrl)) {
             fetchedUrls.add(normalizedUrl);
-            // Create a meaningful description
+            // Create a meaningful description / query id. Never includes the patient
+            // parameter - it's filtered out below - so this is safe to put in the
+            // requested_queries / failed_query_categories manifest fields.
             const paramDesc = Object.entries(query.params || {})
                                 .filter(([key]) => key !== 'patient') // Don't repeat patient ID
                                 .map(([key, value]) => `${key}=${value}`)
                                 .join(', ');
-            const description = `Initial ${query.resourceType}${paramDesc ? ` (${paramDesc})` : ''}`;
-            currentTasks.push({ url: url, description: description, depth: 0 });
+            const queryId = `${query.resourceType}${paramDesc ? ` (${paramDesc})` : ''}`;
+            requestedQueryIds.push(queryId);
+            currentTasks.push({ url: url, description: `Initial ${queryId}`, depth: 0, queryId, isInitialQuery: true });
         }
     });
-    
+
     // Add direct patient fetch task (still useful to ensure patient resource is fetched)
     const patientUrl = `${fhirBaseUrlWithSlash}Patient/${patientId}`;
     const normalizedPatientUrl = patientUrl.replace(/\/$/, '');
     if (!fetchedUrls.has(normalizedPatientUrl)) {
         fetchedUrls.add(normalizedPatientUrl);
-        currentTasks.push({ url: patientUrl, description: "Patient Record", depth: 0 });
+        const queryId = 'Patient (direct read)';
+        requestedQueryIds.push(queryId);
+        currentTasks.push({ url: patientUrl, description: "Patient Record", depth: 0, queryId, isInitialQuery: true });
     }
-    
+
     totalTasks = currentTasks.length;
     progressCallback(0, totalTasks, 'Starting initial fetch batch...');
     if (totalTasks === 0) {
          console.warn("No initial tasks generated.");
-         return clientFullEhr; 
+         return {
+             ehr: clientFullEhr,
+             requestedQueries: requestedQueryIds,
+             completedQueries: [],
+             failedQueryCategories: ['no_queries_generated'],
+             pagesFollowed: 0,
+             resourceCount: 0,
+             retrievalComplete: false,
+         };
     }
 
     // --- Main Processing Loop (Batching) ---
     while (currentTasks.length > 0) {
         const batchDescription = `Batch of ${currentTasks.length} tasks`;
         console.log(`Starting ${batchDescription}...`); // Log batch start
-        
+
         // Start all fetch-and-process operations for the current batch.
         // The ConcurrencyManager limits how many actually run simultaneously.
         const promises = currentTasks.map(task => fetchAndProcessTask(task));
-        
+
         // Wait for all promises in the current batch to settle (complete or fail)
         const results = await Promise.allSettled(promises);
 
@@ -778,22 +1023,22 @@ export async function fetchAllEhrDataClientSideParallel(
         results.forEach(settledResult => {
             // Check if the promise was fulfilled and returned new tasks
             if (settledResult.status === 'fulfilled' && Array.isArray(settledResult.value)) {
-                const newTasksFromResult: FetchTask[] = settledResult.value; 
+                const newTasksFromResult: FetchTask[] = settledResult.value;
                 for (const newTask of newTasksFromResult) {
                     // Only add the task if the URL hasn't been fetched before
-                    const normalizedUrl = newTask.url.replace(/\/$/, ''); 
+                    const normalizedUrl = newTask.url.replace(/\/$/, '');
                     if (!fetchedUrls.has(normalizedUrl)) {
                          fetchedUrls.add(normalizedUrl); // Mark as added
                          nextBatchTasks.push(newTask);
                          totalTasks++; // Increment total count for progress UI
                     }
                 }
-            } 
+            }
             // No special handling needed for 'rejected' status here, error logged within fetchAndProcessTask
         });
-        
+
         console.log(`${batchDescription} finished. Found ${nextBatchTasks.length} new unique tasks.`);
-        
+
         // Update progress after batch completes (totalTasks might have increased)
         progressCallback(completedFetches, totalTasks, `${batchDescription} finished. Starting next...`);
 
@@ -802,14 +1047,24 @@ export async function fetchAllEhrDataClientSideParallel(
     // --- End of Main Loop ---
 
     console.log(`All fetch batches completed. Final progress: ${completedFetches}/${totalTasks}`);
-    
+
     // --- Final Processing ---
     progressCallback(completedFetches, totalTasks, "Processing inline data..."); // Update status before final step
     processInlineAttachments(clientFullEhr);
 
     progressCallback(completedFetches, totalTasks, "All fetching complete."); // Final progress update
-    console.log(`Finished fetching. Resources: ${Object.keys(clientFullEhr.fhir).length} types, Attachments: ${clientFullEhr.attachments.length}`);
-    
-    console.log("Returning ClientFullEHR object from fetchAllEhrDataClientSideParallel.");
-    return clientFullEhr; // Return the populated object
-} 
+    console.log(`Finished fetching. Resource types: ${Object.keys(clientFullEhr.fhir).length}, resources: ${resourceCount}, attachments: ${clientFullEhr.attachments.length}, pages followed: ${pagesFollowed}.`);
+
+    const completedQueries = requestedQueryIds.filter(id => queryCompleted.has(id) && !queryFailed.has(id));
+    const retrievalComplete = failedCategories.size === 0 && completedQueries.length === requestedQueryIds.length;
+
+    return {
+        ehr: clientFullEhr,
+        requestedQueries: requestedQueryIds,
+        completedQueries,
+        failedQueryCategories: Array.from(failedCategories),
+        pagesFollowed,
+        resourceCount,
+        retrievalComplete,
+    };
+}

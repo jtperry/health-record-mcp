@@ -142,7 +142,10 @@ function updateProgress(completed: number, total: number, message?: string) {
             lastAnnouncedAt = now;
             progressText.textContent = message ? `${line} \u00B7 ${message}` : line;
         }
-        console.log(`Progress: ${completed}/${total} (${percentage.toFixed(1)}%) ${message || ''}`);
+        // Counts only. `message` (shown in the UI above) can carry a fetch task's
+        // description, which embeds resource types, reference paths, and FHIR ids -
+        // patient record metadata that has no business in the browser console.
+        console.log(`Progress: ${completed}/${total} (${percentage.toFixed(1)}%)`);
     }
 
     // Show the container if it's not already visible and we have progress
@@ -222,15 +225,56 @@ async function fetchWithRetry(url: string, init: RequestInit = {}, attempts = 3)
     );
 }
 
-// Function to generate a random string for state
+// Generates the OAuth `state` parameter. Math.random() is not a cryptographically
+// secure source - its output is predictable enough, given a handful of samples, to be
+// reconstructed - and `state` is the value this app relies on to detect a forged
+// authorization response (CSRF). Web Crypto's getRandomValues is the browser's CSPRNG.
 function generateRandomString(length = 40) {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    const bytes = new Uint8Array(length);
+    crypto.getRandomValues(bytes);
     let result = '';
-    const charactersLength = characters.length;
     for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        result += characters.charAt(bytes[i] % characters.length);
     }
     return result;
+}
+
+// Hex-encoded SHA-256 of `data`, via Web Crypto - used for AdvouraExportV1's
+// payload_sha256, computed over the payload as it is actually written, before the
+// file is written.
+async function sha256Hex(data: string): Promise<string> {
+    const bytes = new TextEncoder().encode(data);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// AdvouraExportV1's patient_binding: an opaque identifier stable within one export,
+// generated fresh per export and unrelated to the FHIR patient id, MRN, name, or any
+// other identifier meaningful outside this file.
+function generateOpaqueId(): string {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// A stable, deterministic serialization of the {fhir, attachments} payload, used both
+// to compute payload_sha256 and (implicitly, since it is a pure function of content) to
+// let an importer recompute the same digest from the same content regardless of how
+// this object's keys happened to be inserted during retrieval.
+function canonicalJSONStringify(value: any): string {
+    return JSON.stringify(sortKeysDeep(value));
+}
+function sortKeysDeep(value: any): any {
+    if (Array.isArray(value)) return value.map(sortKeysDeep);
+    if (value && typeof value === 'object') {
+        const sorted: Record<string, any> = {};
+        for (const key of Object.keys(value).sort()) {
+            sorted[key] = sortKeysDeep(value[key]);
+        }
+        return sorted;
+    }
+    return value;
 }
 
 // --- Brand Selector Helper Functions ---
@@ -862,7 +906,8 @@ async function initiateSmartAuth(fhirBaseUrl: string, vendorAuthConfig: VendorAu
 
         // 6. Redirect user
         updateStatus('Redirecting to EHR for authorization...');
-        console.log(`[initiateSmartAuth] Redirecting to: ${authUrl.toString()}`);
+        // Not the full URL: it carries the PKCE code_challenge and the CSRF state value.
+        console.log(`[initiateSmartAuth] Redirecting to authorization endpoint at ${authorizationEndpoint}.`);
         window.location.href = authUrl.toString();
 
     } catch (err: any) {
@@ -1120,7 +1165,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatusContainer(true);
             updateStatus('Received authorization code. Validating...');
             console.log('Detected redirect from EHR.');
-            console.log(`Code: ${code.substring(0, 10)}...`, `State: ${state}`);
+            // No code, no state: the code is a single-use bearer credential for this
+            // patient's record until exchanged, and state is this session's CSRF secret.
 
             // *** HIDE BRAND SELECTOR UI IMMEDIATELY ON REDIRECT ***
             if (brandSelectorContainer) brandSelectorContainer.style.display = 'none';
@@ -1182,16 +1228,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const accessToken = tokenData.access_token;
                 const patientId = tokenData.patient;
-                const grantedScopes = tokenData.scope;
 
                 if (!accessToken || !patientId) {
                     throw new Error('Token response missing required access_token or patient ID.');
                 }
 
                 updateStatus('Token received successfully.');
-                console.log(`Access Token: ${accessToken.substring(0, 8)}...`);
-                console.log(`Patient ID: ${patientId}`);
-                console.log(`Granted Scopes: ${grantedScopes || 'N/A'}`);
+                // No token (even truncated, it is still live credential material), no
+                // patient id, and no granted-scope list logged here - scopes describe
+                // which categories of this patient's data were authorized, which is
+                // itself patient metadata.
 
                 // Clear sensitive state now that exchange is successful
                 sessionStorage.removeItem(AUTH_STORAGE_KEY);
@@ -1202,19 +1248,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 showProgressContainer(true); // Show progress bar early
                 updateProgress(0, 0, 'Initiating fetch...'); // Initial progress message
 
-                // *** Store fetched data in a variable accessible later ***
-                let fetchedClientFullEhrObject: any | null = null; // Renamed for clarity
+                let retrievalOutcome: Awaited<ReturnType<typeof fetchAllEhrDataClientSideParallel>> | null = null;
                 try {
-                    fetchedClientFullEhrObject = await fetchAllEhrDataClientSideParallel(
+                    retrievalOutcome = await fetchAllEhrDataClientSideParallel(
                         accessToken,
                         fhirBaseUrl,
                         patientId,
                         updateProgress // Pass the progress update function
                     );
                 } catch (fetchError: any) {
-                    // Handle fetch error specifically
+                    // Handle fetch error specifically. Only the message, never the error
+                    // object itself - task URLs and descriptions can be attached to it.
                     updateStatus(`Error fetching EHR data: ${fetchError.message}`, true);
-                    console.error("Error during fetchAllEhrDataClientSideParallel:", fetchError);
+                    console.error(`Error during EHR retrieval: ${fetchError?.message || 'unknown error'}`);
                      // Hide progress bar on fetch error
                     showProgressContainer(false);
                     // Clear sensitive state if not already cleared
@@ -1222,17 +1268,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     return; // Stop execution here
                 }
 
-                console.log("Returned from fetchAllEhrDataClientSideParallel. EHR data:", fetchedClientFullEhrObject);
+                console.log('EHR retrieval finished.');
 
                 // Hide progress bar on successful completion
                 showProgressContainer(false);
 
-                // 3. Log the result
-                console.log("--- ClientFullEHR Object ---");
-                console.log(fetchedClientFullEhrObject);
-                console.log("----------------------------");
+                // No logging of the retrieved record here (or anywhere else in this file):
+                // fhir/attachments is the patient's own clinical content, and console
+                // output on a shared or unmanaged machine is a disclosure the user did not
+                // ask for.
 
-                // 4. Calculate Totals & Prepare Initial Final Status
+                const fetchedClientFullEhrObject = retrievalOutcome.ehr;
+
+                // 3. Calculate Totals & Prepare Initial Final Status
                 let totalResources = 0;
                 let resourceTypeCount = 0;
                 if (fetchedClientFullEhrObject?.fhir) {
@@ -1246,7 +1294,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 const attachmentCount = fetchedClientFullEhrObject?.attachments?.length || 0;
 
                 let finalStatus = `Data fetched successfully! ${resourceTypeCount} resource types, ${totalResources} total resources, and ${attachmentCount} attachments retrieved.`;
+                if (!retrievalOutcome.retrievalComplete) {
+                    finalStatus += ' This retrieval was incomplete \u2014 some data may be missing; see the exported file for detail.';
+                }
                 updateStatus(finalStatus); // Update status initially
+
+                // --- 4. Build the AdvouraExportV1 manifest (Forgejo Barn-Analytics/Advoura #318) ---
+                //
+                // payload_sha256 is computed over the payload actually written - {fhir,
+                // attachments} exactly as retrieved above - using Web Crypto, before the
+                // file is written. patient_binding is a fresh opaque identifier scoped to
+                // this one export; it is never the FHIR patient id or any other identifier
+                // meaningful outside this file.
+                const advouraPayload = { fhir: fetchedClientFullEhrObject.fhir, attachments: fetchedClientFullEhrObject.attachments };
+                const payloadSha256 = await sha256Hex(canonicalJSONStringify(advouraPayload));
+                const patientBinding = generateOpaqueId();
+                const exportObject = {
+                    advoura_export: {
+                        schema_version: 1,
+                        created_at: new Date().toISOString(),
+                        issuer: fhirBaseUrl, // The exact SMART issuer / FHIR base URL the tokens were obtained from.
+                        patient_binding: patientBinding,
+                        retrieval_complete: retrievalOutcome.retrievalComplete,
+                        requested_queries: retrievalOutcome.requestedQueries,
+                        completed_queries: retrievalOutcome.completedQueries,
+                        failed_query_categories: retrievalOutcome.failedQueryCategories,
+                        pages_followed: retrievalOutcome.pagesFollowed,
+                        resource_count: retrievalOutcome.resourceCount,
+                        attachment_count: attachmentCount,
+                        payload_sha256: payloadSha256,
+                    },
+                    fhir: advouraPayload.fhir,
+                    attachments: advouraPayload.attachments,
+                };
 
                 // --- 5. Offer the download ---
                 //
@@ -1265,7 +1345,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Dated, so two downloads do not collide and the user can tell
                         // later which is which.
                         const stamp = new Date().toISOString().slice(0, 10);
-                        triggerJsonDownload(fetchedClientFullEhrObject, `health-record-${stamp}.json`);
+                        triggerJsonDownload(exportObject, `health-record-${stamp}.json`);
                         // Deliberately left enabled. The old code disabled the button with
                         // no explanation, which is a dead end if the save dialog was
                         // dismissed; and a second copy is a reasonable thing to want.
@@ -1279,7 +1359,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err: any) {
                 // Catch errors during token exchange or *outer* fetch block (like JSON parsing of token)
                 updateStatus(`Error during authorization or data processing: ${err.message}`, true);
-                console.error("Unhandled error in redirect handler:", err);
+                console.error(`Unhandled error in redirect handler: ${err?.message || 'unknown error'}`);
                 // Hide progress/confirmation, show status
                 showProgressContainer(false);
                 showConfirmationContainer(false);
@@ -1334,7 +1414,7 @@ function triggerJsonDownload(data: any, filename: string) {
         URL.revokeObjectURL(url); // Clean up
         console.log(`Successfully triggered download of ${filename}`);
     } catch (error: any) {
-        console.error(`Error creating or triggering download for ${filename}:`, error);
+        console.error(`Error creating or triggering download for ${filename}: ${error?.message || 'unknown error'}`);
         alert(`Failed to initiate download: ${error.message}`);
     }
 }
