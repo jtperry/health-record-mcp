@@ -1,5 +1,6 @@
 import pkceChallenge from 'pkce-challenge'; // Import the library
 import { fetchAllEhrDataClientSideParallel } from './clientFhirUtils'; // UPDATED: Import the parallel data fetching function
+import canonicalize from 'canonicalize'; // RFC 8785 (JSON Canonicalization Scheme) - see canonicalJSONStringify below
 
 // --- Declare potential global constants injected by build ---
 declare const __CONFIG_FHIR_BASE_URL__: string | undefined;
@@ -87,10 +88,14 @@ function updateStatus(message: string, isError: boolean = false) {
         statusMessageElement.classList.toggle('is-error', isError);
         statusMessageElement.setAttribute('role', isError ? 'alert' : 'status');
     }
-    console.log(`Status: ${message}`);
-    if (isError) {
-        console.error(`Status Error: ${message}`);
-    }
+    // S2: this used to mirror every status message to the console unconditionally.
+    // Status text is built from server-controlled and user-record-derived values
+    // throughout this file (fetch error messages, EHR retrieval summaries, and - the
+    // concrete case that made this a defect rather than a style choice - a token
+    // exchange failure whose message could otherwise carry the raw token-endpoint
+    // response body). The DOM status element is exactly where the user needs to see
+    // this; the browser console, which can be inspected long after the fact or by
+    // someone else with access to the machine, is not.
 }
 
 // Helper function to manage display
@@ -142,7 +147,10 @@ function updateProgress(completed: number, total: number, message?: string) {
             lastAnnouncedAt = now;
             progressText.textContent = message ? `${line} \u00B7 ${message}` : line;
         }
-        console.log(`Progress: ${completed}/${total} (${percentage.toFixed(1)}%) ${message || ''}`);
+        // Counts only. `message` (shown in the UI above) can carry a fetch task's
+        // description, which embeds resource types, reference paths, and FHIR ids -
+        // patient record metadata that has no business in the browser console.
+        console.log(`Progress: ${completed}/${total} (${percentage.toFixed(1)}%)`);
     }
 
     // Show the container if it's not already visible and we have progress
@@ -222,15 +230,96 @@ async function fetchWithRetry(url: string, init: RequestInit = {}, attempts = 3)
     );
 }
 
-// Function to generate a random string for state
+// Generates the OAuth `state` parameter. Math.random() is not a cryptographically
+// secure source - its output is predictable enough, given a handful of samples, to be
+// reconstructed - and `state` is the value this app relies on to detect a forged
+// authorization response (CSRF). Web Crypto's getRandomValues is the browser's CSPRNG.
 function generateRandomString(length = 40) {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    // S10a: 256 % 66 = 58, so `byte % characters.length` is modulo-biased - the first
+    // 58 characters are each drawn slightly more often than the rest. Reject any byte
+    // at or above the largest multiple of 66 that fits in a byte (198) instead.
+    const limit = 256 - (256 % characters.length);
     let result = '';
-    const charactersLength = characters.length;
-    for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    while (result.length < length) {
+        const buf = new Uint8Array(length - result.length);
+        crypto.getRandomValues(buf);
+        for (const b of buf) if (b < limit) result += characters.charAt(b % characters.length);
     }
     return result;
+}
+
+// Hex-encoded SHA-256 of `data`, via Web Crypto - used for AdvouraExportV1's
+// payload_sha256, computed over the payload as it is actually written, before the
+// file is written.
+async function sha256Hex(data: string): Promise<string> {
+    const bytes = new TextEncoder().encode(data);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// AdvouraExportV1's patient_binding (#318 Amendment 2).
+//
+// patient_binding = lowercase_hex( SHA-256( "advoura-export-v1|" || issuer || "|" || patient_id ) )
+//
+// This replaces a first cut that generated 16 fresh random bytes per export. That
+// satisfied the frozen contract's rule 3 ("stable within one export") literally, but
+// contradicted rule 4, which needs patient_binding to serve as a cross-export identity
+// anchor (#275): a value that differs between two exports of the same patient from the
+// same issuer, a month apart, makes every re-import a new patient and duplicates the
+// whole record - the exact failure #275's anchor exists to prevent. Amendment 2 rules
+// this derivation instead: deterministic per (issuer, patient_id) pair, so the same
+// patient at the same issuer always binds to the same value, and distinct across
+// issuers or across a server's own re-issuance of the patient's logical id (at which
+// point it genuinely is a different identity as far as that server is concerned). No
+// salt: a random salt would destroy the cross-export stability that is the entire
+// point, and a salt derived from the same two inputs would add nothing. The
+// "advoura-export-v1|" prefix is domain separation only, so this digest cannot collide
+// with any other use of the same two inputs elsewhere.
+//
+// This value is PSEUDONYMOUS, NOT ANONYMOUS - it is a one-way function of a real
+// patient identifier, and anyone who holds `issuer` and can enumerate or guess patient
+// ids on that server can confirm a match against it. That is accepted here only
+// because anyone holding this export file already holds the complete medical record it
+// describes, including the same patient id in plain text inside the FHIR payload
+// itself - the binding discloses nothing to a file-holder that the file does not
+// already disclose far more directly. It is not a defence against someone who has the
+// export; it is a defence against the binding being meaningful if it is ever surfaced,
+// logged, or compared on its own. It must never be displayed to the user as a harmless
+// technical identifier, and must never be put in a log, a filename, an error message,
+// or any surface that outlives the record itself - and (following from the product
+// having no network at all, but worth stating for this specific field) it must never
+// be sent anywhere.
+async function derivePatientBinding(issuer: string, patientId: string): Promise<string> {
+    return sha256Hex(`advoura-export-v1|${issuer}|${patientId}`);
+}
+
+// A stable, deterministic serialization of the {fhir, attachments} payload, used both
+// to compute payload_sha256 and (implicitly, since it is a pure function of content) to
+// let an importer recompute the same digest from the same content regardless of how
+// this object's keys happened to be inserted during retrieval.
+//
+// S4 / #318 Amendment 1: this used to be JSON.stringify(sortKeysDeep(value)), a
+// hand-rolled "sorted keys" canonicalization. Sorted keys alone is not enough:
+// JSON.stringify (JS) and serde_json (Rust, the importer's side) do not agree
+// byte-for-byte on number formatting, string escaping, or non-ASCII handling even
+// with identical key order - and JS's own Object.keys() puts integer-like keys in
+// numeric order regardless of insertion order (e.g. {"10":x,"2":y} iterates "2" before
+// "10"), where RFC 8785 requires the opposite, lexicographic-by-UTF-16-code-unit order.
+// Ruling 1 of Amendment 1 names RFC 8785 (JSON Canonicalization Scheme, JCS)
+// explicitly and forbids hand-rolling it. `canonicalize` (npm, erdtman/canonicalize,
+// Apache-2.0, zero dependencies) is a maintained RFC 8785 implementation: it sorts
+// object keys by UTF-16 code unit (not Array.sort()'s numeric-first default) and
+// serializes numbers via the same algorithm JCS specifies.
+//
+// Per Amendment 1 Ruling 2/3: payload_sha256 is ADVISORY in v1, not blocking. There is
+// no shared conformance-corpus proof yet that this exporter (JS/canonicalize) and the
+// importer (Rust, #309) produce byte-identical digests for the same document - only
+// that this side now uses a named, maintained standard instead of an ad hoc one. Do
+// not read retrieval of a correct digest here as validated end-to-end; that requires
+// the corpus in Ruling 3 before the check may become blocking.
+function canonicalJSONStringify(value: any): string {
+    return canonicalize(value) ?? 'null';
 }
 
 // --- Brand Selector Helper Functions ---
@@ -790,13 +879,16 @@ async function initiateSmartAuth(fhirBaseUrl: string, vendorAuthConfig: VendorAu
     const { clientId, scopes, redirectUrl } = vendorAuthConfig;
     if (!clientId || !scopes) {
         updateStatus('Error: Missing SMART client configuration (clientId/scopes).', true);
-        console.error('VendorAuthConfig missing fields:', vendorAuthConfig);
+        // S9: not logging the object itself - it carries clientId and the requested
+        // scopes, and elsewhere in this file granted scopes are deliberately stripped
+        // before logging on the grounds that scopes are patient metadata (see the
+        // token-exchange success path). Keeping this file internally consistent means
+        // not logging them here either, even though these particular scopes are static
+        // build-time config rather than a grant.
         return;
     }
 
     const redirectUri = redirectUrl ? makeAbsoluteUrl(redirectUrl) : defaultRedirectUri;
-
-    console.log('[initiateSmartAuth] Using VendorAuthConfig:', vendorAuthConfig);
 
     try {
         updateStatus('Performing SMART discovery...');
@@ -862,7 +954,8 @@ async function initiateSmartAuth(fhirBaseUrl: string, vendorAuthConfig: VendorAu
 
         // 6. Redirect user
         updateStatus('Redirecting to EHR for authorization...');
-        console.log(`[initiateSmartAuth] Redirecting to: ${authUrl.toString()}`);
+        // Not the full URL: it carries the PKCE code_challenge and the CSRF state value.
+        console.log(`[initiateSmartAuth] Redirecting to authorization endpoint at ${authorizationEndpoint}.`);
         window.location.href = authUrl.toString();
 
     } catch (err: any) {
@@ -891,8 +984,9 @@ function handleBrandConnect() {
     }
 
     console.log("--- Brand Connect Button Clicked ---");
-    console.log("Selected Item:", selectedBrandItem);
-    console.log('Using vendorConfig:', vendorConfig);
+    // S9: not logging selectedBrandItem/vendorConfig - see the comment above
+    // initiateSmartAuth's own missing-config check for why (they carry clientId and
+    // scopes, and this file is otherwise consistent about not logging scopes).
 
     // Find a suitable FHIR endpoint URL (take the first endpoint)
     let fhirEndpointUrl: string | null = null;
@@ -1112,7 +1206,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             history.replaceState({}, document.title, window.location.pathname);
         } catch (e) {
-            console.warn('Could not strip the authorization code from the URL:', e);
+            // S8: log only the exception's own message, not the raw DOMException object.
+            console.warn('Could not strip the authorization code from the URL:', (e as Error)?.message || 'unknown error');
         }
 
         // --- Phase 2: Handle Redirect ---
@@ -1120,7 +1215,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatusContainer(true);
             updateStatus('Received authorization code. Validating...');
             console.log('Detected redirect from EHR.');
-            console.log(`Code: ${code.substring(0, 10)}...`, `State: ${state}`);
+            // No code, no state: the code is a single-use bearer credential for this
+            // patient's record until exchanged, and state is this session's CSRF secret.
 
             // *** HIDE BRAND SELECTOR UI IMMEDIATELY ON REDIRECT ***
             if (brandSelectorContainer) brandSelectorContainer.style.display = 'none';
@@ -1176,22 +1272,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tokenData = await tokenResponse.json(); // Attempt to parse JSON regardless of status
 
                 if (!tokenResponse.ok) {
-                    const errorDetails = tokenData.error_description || tokenData.error || JSON.stringify(tokenData);
-                    throw new Error(`Token exchange failed (${tokenResponse.status}): ${errorDetails}`);
+                    // S2: tokenData is the entire token-endpoint response body - server
+                    // controlled, unbounded, and (this is the live case, not a hypothetical)
+                    // capable of carrying an access token alongside a non-2xx status, or
+                    // echoing `code`/`code_verifier` back in a vendor diagnostics field. It
+                    // must never appear in a thrown message (which reaches updateStatus's DOM
+                    // text and, via the outer catch, another updateStatus call), a log, or the
+                    // DOM. Report only the status code and a fixed category - never any field
+                    // of the body itself, including error/error_description.
+                    throw new Error(`Token exchange failed (HTTP ${tokenResponse.status}).`);
                 }
 
                 const accessToken = tokenData.access_token;
                 const patientId = tokenData.patient;
-                const grantedScopes = tokenData.scope;
 
                 if (!accessToken || !patientId) {
                     throw new Error('Token response missing required access_token or patient ID.');
                 }
 
                 updateStatus('Token received successfully.');
-                console.log(`Access Token: ${accessToken.substring(0, 8)}...`);
-                console.log(`Patient ID: ${patientId}`);
-                console.log(`Granted Scopes: ${grantedScopes || 'N/A'}`);
+                // No token (even truncated, it is still live credential material), no
+                // patient id, and no granted-scope list logged here - scopes describe
+                // which categories of this patient's data were authorized, which is
+                // itself patient metadata.
 
                 // Clear sensitive state now that exchange is successful
                 sessionStorage.removeItem(AUTH_STORAGE_KEY);
@@ -1202,19 +1305,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 showProgressContainer(true); // Show progress bar early
                 updateProgress(0, 0, 'Initiating fetch...'); // Initial progress message
 
-                // *** Store fetched data in a variable accessible later ***
-                let fetchedClientFullEhrObject: any | null = null; // Renamed for clarity
+                let retrievalOutcome: Awaited<ReturnType<typeof fetchAllEhrDataClientSideParallel>> | null = null;
                 try {
-                    fetchedClientFullEhrObject = await fetchAllEhrDataClientSideParallel(
+                    retrievalOutcome = await fetchAllEhrDataClientSideParallel(
                         accessToken,
                         fhirBaseUrl,
                         patientId,
                         updateProgress // Pass the progress update function
                     );
                 } catch (fetchError: any) {
-                    // Handle fetch error specifically
+                    // Handle fetch error specifically. Only the message, never the error
+                    // object itself - task URLs and descriptions can be attached to it.
                     updateStatus(`Error fetching EHR data: ${fetchError.message}`, true);
-                    console.error("Error during fetchAllEhrDataClientSideParallel:", fetchError);
+                    console.error(`Error during EHR retrieval: ${fetchError?.message || 'unknown error'}`);
                      // Hide progress bar on fetch error
                     showProgressContainer(false);
                     // Clear sensitive state if not already cleared
@@ -1222,17 +1325,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     return; // Stop execution here
                 }
 
-                console.log("Returned from fetchAllEhrDataClientSideParallel. EHR data:", fetchedClientFullEhrObject);
+                console.log('EHR retrieval finished.');
 
                 // Hide progress bar on successful completion
                 showProgressContainer(false);
 
-                // 3. Log the result
-                console.log("--- ClientFullEHR Object ---");
-                console.log(fetchedClientFullEhrObject);
-                console.log("----------------------------");
+                // No logging of the retrieved record here (or anywhere else in this file):
+                // fhir/attachments is the patient's own clinical content, and console
+                // output on a shared or unmanaged machine is a disclosure the user did not
+                // ask for.
 
-                // 4. Calculate Totals & Prepare Initial Final Status
+                const fetchedClientFullEhrObject = retrievalOutcome.ehr;
+
+                // 3. Calculate Totals & Prepare Initial Final Status
                 let totalResources = 0;
                 let resourceTypeCount = 0;
                 if (fetchedClientFullEhrObject?.fhir) {
@@ -1246,7 +1351,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 const attachmentCount = fetchedClientFullEhrObject?.attachments?.length || 0;
 
                 let finalStatus = `Data fetched successfully! ${resourceTypeCount} resource types, ${totalResources} total resources, and ${attachmentCount} attachments retrieved.`;
+                if (!retrievalOutcome.retrievalComplete) {
+                    finalStatus += ' This retrieval was incomplete \u2014 some data may be missing; see the exported file for detail.';
+                }
                 updateStatus(finalStatus); // Update status initially
+
+                // --- 4. Build the AdvouraExportV1 manifest (Forgejo Barn-Analytics/Advoura #318) ---
+                //
+                // payload_sha256 is computed over the payload actually written - {fhir,
+                // attachments} exactly as retrieved above - using Web Crypto, before the
+                // file is written. It is advisory in v1 (Amendment 1 Ruling 2/3): see
+                // canonicalJSONStringify above. patient_binding is derived from (issuer,
+                // patient_id) per Amendment 2: see derivePatientBinding above - it is
+                // pseudonymous, not anonymous, and must never be logged, displayed, or put
+                // in a filename on its own.
+                const advouraPayload = { fhir: fetchedClientFullEhrObject.fhir, attachments: fetchedClientFullEhrObject.attachments };
+                // #318 Amendment 4: payload_sha256 is advisory (Amendment 1 Ruling 2) and may
+                // never be the reason a completed export is lost. `canonicalize` (RFC 8785)
+                // throws - rather than substituting, as the old hand-rolled canonicalizer did
+                // - on a lone surrogate, NaN, Infinity, or a circular reference; a FHIR server
+                // returning a string with an unpaired `\uD800`-style escape reaches this. The
+                // payload the user already successfully retrieved is the thing of value, so a
+                // throw here is caught locally: the manifest is still produced, with
+                // payload_sha256: null and a category recording that the digest could not be
+                // computed, instead of propagating to the outer catch below and losing the
+                // download entirely.
+                let payloadSha256: string | null = null;
+                const manifestCategories = [...retrievalOutcome.failedQueryCategories];
+                try {
+                    payloadSha256 = await sha256Hex(canonicalJSONStringify(advouraPayload));
+                } catch (digestErr: any) {
+                    console.warn(`Could not compute payload_sha256 (advisory only, export is unaffected): ${digestErr?.message || 'unknown error'}`);
+                    manifestCategories.push('digest_computation_failed');
+                }
+                const patientBinding = await derivePatientBinding(fhirBaseUrl, patientId);
+                const exportObject = {
+                    advoura_export: {
+                        schema_version: 1,
+                        created_at: new Date().toISOString(),
+                        issuer: fhirBaseUrl, // The exact SMART issuer / FHIR base URL the tokens were obtained from.
+                        patient_binding: patientBinding,
+                        retrieval_complete: retrievalOutcome.retrievalComplete,
+                        requested_queries: retrievalOutcome.requestedQueries,
+                        completed_queries: retrievalOutcome.completedQueries,
+                        failed_query_categories: manifestCategories,
+                        pages_followed: retrievalOutcome.pagesFollowed,
+                        resource_count: retrievalOutcome.resourceCount,
+                        attachment_count: attachmentCount,
+                        payload_sha256: payloadSha256,
+                    },
+                    fhir: advouraPayload.fhir,
+                    attachments: advouraPayload.attachments,
+                };
 
                 // --- 5. Offer the download ---
                 //
@@ -1265,7 +1421,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Dated, so two downloads do not collide and the user can tell
                         // later which is which.
                         const stamp = new Date().toISOString().slice(0, 10);
-                        triggerJsonDownload(fetchedClientFullEhrObject, `health-record-${stamp}.json`);
+                        triggerJsonDownload(exportObject, `health-record-${stamp}.json`);
                         // Deliberately left enabled. The old code disabled the button with
                         // no explanation, which is a dead end if the save dialog was
                         // dismissed; and a second copy is a reasonable thing to want.
@@ -1279,7 +1435,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err: any) {
                 // Catch errors during token exchange or *outer* fetch block (like JSON parsing of token)
                 updateStatus(`Error during authorization or data processing: ${err.message}`, true);
-                console.error("Unhandled error in redirect handler:", err);
+                console.error(`Unhandled error in redirect handler: ${err?.message || 'unknown error'}`);
                 // Hide progress/confirmation, show status
                 showProgressContainer(false);
                 showConfirmationContainer(false);
@@ -1334,7 +1490,7 @@ function triggerJsonDownload(data: any, filename: string) {
         URL.revokeObjectURL(url); // Clean up
         console.log(`Successfully triggered download of ${filename}`);
     } catch (error: any) {
-        console.error(`Error creating or triggering download for ${filename}:`, error);
+        console.error(`Error creating or triggering download for ${filename}: ${error?.message || 'unknown error'}`);
         alert(`Failed to initiate download: ${error.message}`);
     }
 }
