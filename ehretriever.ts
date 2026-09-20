@@ -98,6 +98,110 @@ function updateStatus(message: string, isError: boolean = false) {
     // someone else with access to the machine, is not.
 }
 
+// --- Retrieval status view (Forgejo Barn-Analytics/Advoura #334) ---
+//
+// The live manifest against Mayo's Epic R4 endpoint (2026-09-20) showed the trap in
+// failed_query_categories: it names which QUERIES failed, not which DATA is absent. That
+// run's category list included "Specimen" and "Observation" even though the record held
+// 25 Specimens (arrived by reference-following off DiagnosticReports/Observations) and
+// 299 Observations (only the mental-health category's search failed). Rendering
+// failed_query_categories directly would tell a reader their specimens are missing while
+// 25 sit in the very record they are looking at.
+//
+// buildRetrievalStatusView is a pure function so it can be exercised directly against a
+// manifest fixture without a DOM (see tests/ehretriever.statusView.test.ts) - ehretriever.ts
+// is a classic script with no module exports (see tests/ehretriever.helpers.test.ts's
+// header comment for why), so tests extract this function's source text by name.
+interface RetrievalStatusInput {
+    retrievalComplete: boolean;
+    requestedQueries: string[];
+    completedQueries: string[];
+    failedQueryCategories: string[];
+    resourceTypeCount: number;
+    totalResources: number;
+    attachmentCount: number;
+}
+
+interface RetrievalStatusView {
+    isComplete: boolean;
+    // State first, never a celebratory "successfully!" above an incompleteness notice.
+    headline: string;
+    // Counts, kept out of the headline - 671 reads as comprehensive on its own.
+    detail: string;
+    // The exact requestedQueries \ completedQueries diff - e.g. "Observation
+    // (category=mental-health)" - never failedQueryCategories, which can name a
+    // resource type the record still holds in full via reference-following.
+    missingQueries: string[];
+    // reference_fetch_failed / attachment_fetch_failed describe individual fetches
+    // failing inside otherwise-successful work, not a whole category being unavailable -
+    // kept out of missingQueries and phrased separately, only when present.
+    partialFetchNote: string | null;
+}
+
+function buildRetrievalStatusView(input: RetrievalStatusInput): RetrievalStatusView {
+    const completedSet = new Set(input.completedQueries);
+    const missingQueries = input.requestedQueries.filter(q => !completedSet.has(q));
+
+    const rt = input.resourceTypeCount;
+    const tr = input.totalResources;
+    const ac = input.attachmentCount;
+    const detail = `${rt} resource type${rt === 1 ? '' : 's'}, ${tr} total resource${tr === 1 ? '' : 's'}, and ${ac} attachment${ac === 1 ? '' : 's'} retrieved.`;
+
+    const hasPartialFetchFailures =
+        input.failedQueryCategories.includes('reference_fetch_failed') ||
+        input.failedQueryCategories.includes('attachment_fetch_failed');
+    const partialFetchNote = hasPartialFetchFailures
+        ? 'Some linked records and documents could not be retrieved.'
+        : null;
+
+    return {
+        isComplete: input.retrievalComplete,
+        headline: input.retrievalComplete ? 'Data fetched successfully.' : 'This retrieval was incomplete.',
+        detail,
+        missingQueries,
+        partialFetchNote,
+    };
+}
+
+// Renders a RetrievalStatusView into the status panel. Matter-of-fact, not alarmed: an
+// incomplete retrieval gets the same navy "notice" treatment used elsewhere in this page
+// for ordinary non-error information, not the red is-error styling reserved for failures
+// requiring an interrupt (role="alert"). Complete and incomplete are told apart by the
+// headline wording itself plus a non-colour border cue (SC 1.4.1), not by colour alone.
+function renderRetrievalStatus(view: RetrievalStatusView) {
+    const sentences = [view.headline, view.detail];
+    if (view.partialFetchNote) sentences.push(view.partialFetchNote);
+    sentences.push('Your record is assembled in this browser and has not been sent anywhere.');
+
+    if (statusMessageElement) {
+        statusMessageElement.textContent = sentences.join(' ');
+        statusMessageElement.classList.remove('is-error');
+        statusMessageElement.classList.toggle('is-incomplete', !view.isComplete);
+        statusMessageElement.setAttribute('role', 'status');
+    }
+
+    const container = document.getElementById('status-container');
+    if (container) container.classList.toggle('is-incomplete', !view.isComplete);
+
+    const missingLabel = document.getElementById('status-missing-label');
+    const missingList = document.getElementById('status-missing-list');
+    if (missingList) {
+        missingList.textContent = '';
+        if (view.missingQueries.length > 0) {
+            for (const q of view.missingQueries) {
+                const li = document.createElement('li');
+                li.textContent = q;
+                missingList.appendChild(li);
+            }
+            missingList.style.display = '';
+            if (missingLabel) missingLabel.style.display = '';
+        } else {
+            missingList.style.display = 'none';
+            if (missingLabel) missingLabel.style.display = 'none';
+        }
+    }
+}
+
 // Helper function to manage display
 function showStatusContainer(show: boolean) {
     const formContainer = document.getElementById('form-container');
@@ -1350,11 +1454,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 const attachmentCount = fetchedClientFullEhrObject?.attachments?.length || 0;
 
-                let finalStatus = `Data fetched successfully! ${resourceTypeCount} resource types, ${totalResources} total resources, and ${attachmentCount} attachments retrieved.`;
-                if (!retrievalOutcome.retrievalComplete) {
-                    finalStatus += ' This retrieval was incomplete \u2014 some data may be missing; see the exported file for detail.';
-                }
-                updateStatus(finalStatus); // Update status initially
+                // #334: lead with the state, derive what's missing from requestedQueries
+                // \ completedQueries (never failedQueryCategories - see the function
+                // comment above), and render before the manifest/digest below so a digest
+                // failure can never change what the reader already saw.
+                const retrievalStatusView = buildRetrievalStatusView({
+                    retrievalComplete: retrievalOutcome.retrievalComplete,
+                    requestedQueries: retrievalOutcome.requestedQueries,
+                    completedQueries: retrievalOutcome.completedQueries,
+                    failedQueryCategories: retrievalOutcome.failedQueryCategories,
+                    resourceTypeCount,
+                    totalResources,
+                    attachmentCount,
+                });
+                renderRetrievalStatus(retrievalStatusView);
 
                 // --- 4. Build the AdvouraExportV1 manifest (Forgejo Barn-Analytics/Advoura #318) ---
                 //
@@ -1413,8 +1526,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // actual opener, so any site could open this page with its own origin in the
                 // hash and receive a complete medical record, using this app's registered
                 // client id to obtain it. See docs/health.circlejtp.me-plan.md 9.4.
-                finalStatus += ` Your record is assembled in this browser and has not been sent anywhere.`;
-                updateStatus(finalStatus);
+                // (Status was already rendered above by renderRetrievalStatus, which
+                // includes this same closing sentence.)
                 if (downloadDataBtn) {
                     downloadDataBtn.style.display = 'inline-flex';
                     downloadDataBtn.onclick = () => {

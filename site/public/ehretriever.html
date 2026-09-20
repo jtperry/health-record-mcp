@@ -177,6 +177,15 @@
     color: var(--error); font-weight: 600;
     border-left: 4px solid var(--error); padding-left: 12px;
   }
+  /* An incomplete retrieval is ordinary, not an error - matter-of-fact navy, the same
+     non-colour-only treatment (a border, not colour alone, per SC 1.4.1) used for the
+     page's other non-error notices, so it reads as visually distinct from both the
+     default "complete" state and the red is-error state without implying alarm. */
+  #status-container.is-incomplete { border-left: 4px solid var(--navy); }
+  #status-message.is-incomplete { font-weight: 600; }
+  #status-missing-label { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--body); }
+  #status-missing-list { margin: 0 0 14px; padding-left: 22px; font-size: 15px; color: var(--body); }
+  #status-missing-list li { margin: 0 0 4px; }
   #fetch-progress { width: min(100%, 420px); height: 14px; accent-color: var(--accent); }
   #progress-text { font-family: var(--mono); font-size: 13.5px; color: var(--body); }
   .progress-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -290,6 +299,8 @@
   <div class="panel" id="status-container" style="display: none;">
     <h2>Status</h2>
     <p id="status-message" role="status" tabindex="-1">Loading&hellip;</p>
+    <p id="status-missing-label" style="display: none;">Searches that did not complete:</p>
+    <ul id="status-missing-list" style="display: none;"></ul>
     <button type="button" id="download-data-btn" class="btn btn-primary" style="display: none;">Save my record (JSON)</button>
   </div>
 
