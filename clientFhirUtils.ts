@@ -394,7 +394,16 @@ function extractTasksFromResource(resource: any, fhirBaseUrl: string, currentDep
                         resourceId: resource.id,
                         attachmentPath: path,
                         originalResourceJson: resource, // Pass context
-                        depth: currentDepth // Attachments don't increase depth level
+                        depth: currentDepth, // Attachments don't increase depth level
+                        // Forgejo Barn-Analytics/Advoura #329 finding A: this was the one
+                        // FetchTask creation site that left isSearch unset. The falsy
+                        // default is the right value, so stating it changes no behaviour
+                        // on its own - what it changes is that the read branches this task
+                        // reaches are now reached by a stated expectation rather than by an
+                        // unstated default, which is the whole point of #318 Amendment 5.
+                        // The undercount finding A actually describes is handled where it
+                        // happens, in the single-resource branch of fetchAndProcessTask.
+                        isSearch: false,
                     });
                 }
             } else {
@@ -734,6 +743,55 @@ function processInlineAttachments(clientFullEhr: ClientFullEHR): number {
 }
 
 
+/**
+ * The key under which a task counts as "already queued" (the `fetchedUrls` set).
+ *
+ * For everything except an attachment, the unit of work IS the URL: two tasks for
+ * the same URL would store the same resource twice, and a `next` link that points
+ * at itself must be dropped or the crawl never terminates. That is what the plain
+ * normalised-URL key protects, and it stays exactly as it was.
+ *
+ * An attachment task is not that shape. Its unit of work is a *slot* -
+ * `(resourceType, resourceId, attachmentPath)`, which is also the identity
+ * `processAttachmentData` stores and de-duplicates under - and two different slots
+ * may legitimately name the same `Binary/<id>`. Measured on a real Epic export:
+ * 107 attachment slots, 77 stored, and 29 of the 30 missing were
+ * `DocumentReference.content[i].attachment` slots whose `Binary/<id>` was also
+ * named by a `DiagnosticReport.presentedForm[j]` slot. The URL-keyed set let the
+ * first of the pair through and silently discarded the second, so the bytes were
+ * fetched once and filed under one slot while the other arrived empty - with no
+ * failure category recorded, because a deduped task is dropped here rather than
+ * failed inside fetchAndProcessTask. Keying an attachment task by its destination
+ * slot as well as its URL is what makes each slot its own unit of work again.
+ *
+ * Two slots sharing a URL now yield two keys; the same slot still yields one. That
+ * second half is an invariant, not a live path: `extractTasksFromResource` runs only
+ * when a resource is newly stored (see its two call sites in fetchAndProcessTask),
+ * the check-then-store is synchronous so concurrent tasks cannot interleave through
+ * it, and `findAttachments` visits each node at one path - so a given slot cannot be
+ * discovered twice in a run as this file stands today. The key is written to collapse
+ * it anyway, because "one slot, one unit of work" is the property being relied on and
+ * it should not depend on that reachability argument staying true. It is unit-tested
+ * directly (tests/clientFhirUtils.attachmentSlots.test.ts) rather than through the
+ * crawl, which cannot reach it.
+ *
+ * Cost: the same Binary is fetched once per slot that names it, so the worst case is
+ * (attachment slots - distinct attachment URLs) extra fetches - 29 in the measured
+ * export, about 37% more attachment fetches. MAX_ATTACHMENT_SIZE_MB is NOT a bound on
+ * this: it is checked against the server-*declared* `attachment.size` at task-creation
+ * time and nothing caps the bytes actually received per attachment, so the only real
+ * bound is the shared MAX_TOTAL_BYTES budget. Fetching per slot is the simplest
+ * correct fix and is what this does. In principle the two slots may declare different
+ * contentTypes, which this file turns into different `Accept` headers and so possibly
+ * different bytes; in the measured export all 29 pairs declared `text/html` on both
+ * sides, so there the second fetch was redundant in practice.
+ */
+export function dedupeKeyForTask(task: FetchTask): string {
+    const normalizedUrl = task.url.replace(/\/$/, '');
+    if (!task.isAttachment) return normalizedUrl;
+    return `attachment|${normalizedUrl}|${task.resourceType}/${task.resourceId}#${task.attachmentPath}`;
+}
+
 // --- Simplified Parallel Fetch Orchestrator ---
 export async function fetchAllEhrDataClientSideParallel(
     accessToken: string,
@@ -1041,6 +1099,25 @@ export async function fetchAllEhrDataClientSideParallel(
                             discoveredTasks = discoveredTasks.concat(extractTasksFromResource(res, fhirBaseUrl, task.depth));
                         }
                     }
+                    if (task.isAttachment) {
+                        // Forgejo Barn-Analytics/Advoura #329 finding A. An attachment
+                        // fetch answered as application/fhir+json - ordinary FHIR server
+                        // behaviour for a Binary read - cannot be claimed by the
+                        // attachment-blob branch above, so it lands here and is stored as
+                        // a resource. No clinical content is lost (a Binary read carries
+                        // its bytes in .data inside the resource just stored), but nothing
+                        // was added to clientFullEhr.attachments, so attachment_count
+                        // undercounts by one. #318 Amendment 3's invariant is that such a
+                        // shortfall is never silent, and attachment_dropped is the category
+                        // that amendment extended to exactly this case.
+                        //
+                        // markQueryFailed is deliberately NOT called: an attachment task
+                        // has no queryId, so its only effect would be to add
+                        // attachment_fetch_failed - and the fetch did not fail. That is
+                        // #329 finding E's first half, and naming a class that did not
+                        // occur is not made acceptable by being cosmetic.
+                        failedCategories.add('attachment_dropped');
+                    }
                     markQueryComplete(task.queryId); // A single resource has no pagination of its own.
                 }
                 recognisedResponse = true;
@@ -1189,10 +1266,10 @@ export async function fetchAllEhrDataClientSideParallel(
             if (settledResult.status === 'fulfilled' && Array.isArray(settledResult.value)) {
                 const newTasksFromResult: FetchTask[] = settledResult.value;
                 for (const newTask of newTasksFromResult) {
-                    // Only add the task if the URL hasn't been fetched before
-                    const normalizedUrl = newTask.url.replace(/\/$/, '');
-                    if (!fetchedUrls.has(normalizedUrl)) {
-                         fetchedUrls.add(normalizedUrl); // Mark as added
+                    // Only add the task if this unit of work hasn't been queued before
+                    const dedupeKey = dedupeKeyForTask(newTask);
+                    if (!fetchedUrls.has(dedupeKey)) {
+                         fetchedUrls.add(dedupeKey); // Mark as added
                          nextBatchTasks.push(newTask);
                          totalTasks++; // Increment total count for progress UI
                          // S7 fix: count a followed page only once it is actually queued
